@@ -1423,107 +1423,154 @@ const deleteAccount = async () => {
 
 @media (max-width: 768px) {
   .practice-content {
-    padding: 0 15px;
-    margin: 20px auto;
+    padding: 0 12px;
+    margin: 15px auto;
   }
 
   .nav-content {
-    padding: 0 15px;
+    padding: 0 12px;
   }
 
   .nav-content h2 {
-    font-size: 1.3rem;
-  }
-
-  .practice-card {
-    padding: 20px;
-    border-radius: 16px;
-  }
-
-  .header h1 {
-    font-size: 1.4rem;
-  }
-
-  .category-badge {
-    font-size: 0.75rem;
-    padding: 5px 12px;
-  }
-
-  .sentence-display {
-    padding: 20px;
-    margin-bottom: 20px;
-  }
-
-  .sentence {
-    font-size: 1.2rem;
-    line-height: 1.6;
-  }
-
-  .control-btn {
-    padding: 12px;
-    font-size: 0.95rem;
-  }
-
-  .results {
-    padding: 15px;
-  }
-
-  .results h3 {
     font-size: 1.1rem;
   }
 
-  .user-text {
+  .logo-icon {
+    font-size: 0.75em;
+    padding: 3px 6px;
+  }
+
+  .practice-card {
+    padding: 15px;
+    border-radius: 12px;
+  }
+
+  .header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .header h1 {
+    font-size: 1.1rem;
+  }
+
+  .category-badge {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+  }
+
+  .sentence-display {
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+
+  .sentence {
     font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  .control-btn {
+    padding: 10px;
+    font-size: 0.85rem;
+  }
+
+  .results {
     padding: 12px;
+  }
+
+  .results h3 {
+    font-size: 0.95rem;
+  }
+
+  .user-text {
+    font-size: 0.9rem;
+    padding: 10px;
   }
 
   .scores-container {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 10px;
   }
 
   .score-card {
-    padding: 20px;
+    padding: 15px;
   }
 
   .score-label {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
   }
 
   .score-value {
-    font-size: 2.5rem;
+    font-size: 2rem;
+  }
+
+  .score-description {
+    font-size: 0.7rem;
+  }
+
+  .feedback p {
+    font-size: 0.9rem;
   }
 
   .ai-analysis {
-    padding: 20px;
+    padding: 15px;
   }
 
   .ai-analysis h4 {
-    font-size: 1.1rem;
-  }
-
-  .ai-analysis p {
     font-size: 0.95rem;
   }
 
+  .ai-analysis p {
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
   .modal-content {
-    padding: 20px;
-    max-height: 90vh;
+    padding: 15px;
+    max-height: 92vh;
+    font-size: 0.9rem;
   }
 
   .modal-content h2 {
-    font-size: 1.4rem;
-    margin-bottom: 20px;
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+  }
+
+  .settings-section h3 {
+    font-size: 0.95rem;
+  }
+
+  .api-key-description {
+    font-size: 0.8rem;
+  }
+
+  .api-key-input {
+    font-size: 0.85rem;
+    padding: 10px;
   }
 
   .danger-action {
     flex-direction: column;
-    gap: 12px;
-    padding: 15px;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .danger-info h4 {
+    font-size: 0.9rem;
+  }
+
+  .danger-info p {
+    font-size: 0.8rem;
   }
 
   .modal-actions {
     flex-direction: column;
+  }
+
+  .btn-danger, .btn-secondary {
+    font-size: 0.85rem;
+    padding: 10px 20px;
   }
 }
 </style>

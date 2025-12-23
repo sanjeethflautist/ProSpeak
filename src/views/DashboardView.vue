@@ -1219,71 +1219,109 @@ const deleteAccount = async () => {
 
 @media (max-width: 768px) {
   .dashboard-content {
-    padding: 15px;
+    padding: 12px;
   }
 
   .nav-content {
-    padding: 0 15px;
+    padding: 0 12px;
   }
 
   .nav-content h2 {
-    font-size: 1.3rem;
-  }
-
-  .stats-row {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .stat-card {
-    padding: 15px;
-  }
-
-  .stat-icon {
-    font-size: 1.8rem;
-  }
-
-  .stat-value {
-    font-size: 1.8rem;
-  }
-
-  .stat-label {
-    font-size: 0.75rem;
-  }
-
-  .charts-section {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
-
-  .chart-card {
-    padding: 15px;
-  }
-
-  .chart-card h3 {
     font-size: 1.1rem;
-    margin-bottom: 15px;
   }
 
-  .modal-content {
-    padding: 20px;
-    max-height: 90vh;
+  .logo-icon {
+    font-size: 0.75em;
+    padding: 3px 6px;
   }
 
-  .modal-content h2 {
+  .dashboard-content h1 {
     font-size: 1.4rem;
     margin-bottom: 20px;
   }
 
+  .stats-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-icon {
+    font-size: 1.5rem;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+  }
+
+  .charts-section {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .chart-card {
+    padding: 12px;
+  }
+
+  .chart-card h3 {
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+  }
+
+  .modal-content {
+    padding: 15px;
+    max-height: 92vh;
+    font-size: 0.9rem;
+  }
+
+  .modal-content h2 {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+  }
+
+  .settings-section h3 {
+    font-size: 0.95rem;
+  }
+
+  .api-key-description {
+    font-size: 0.8rem;
+  }
+
+  .api-key-input {
+    font-size: 0.85rem;
+    padding: 10px;
+  }
+
   .danger-action {
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     text-align: center;
-    padding: 15px;
+    padding: 12px;
+  }
+
+  .danger-info h4 {
+    font-size: 0.9rem;
+  }
+
+  .danger-info p {
+    font-size: 0.8rem;
   }
 
   .modal-actions {
     flex-direction: column;
+  }
+
+  .btn-danger, .btn-secondary {
+    font-size: 0.85rem;
+    padding: 10px 20px;
   }
 }
 </style>
