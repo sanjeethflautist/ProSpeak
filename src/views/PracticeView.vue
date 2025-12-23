@@ -327,9 +327,11 @@ const toggleAudio = async () => {
 
 const toggleRecording = async () => {
   if (isRecording.value) {
-    // Stop recording manually
+    // User clicked to stop recording manually
     if (recognizer) {
+      console.log('Manually stopping recording')
       recognizer.stop()
+      // Don't set isRecording to false here, let the recognizer.start() promise handle it
     }
     return
   }
@@ -343,12 +345,23 @@ const startRecording = async () => {
     return
   }
 
+  if (isRecording.value) {
+    console.log('Already recording, ignoring...')
+    return
+  }
+
   try {
     isRecording.value = true
     error.value = ''
+    userTranscript.value = ''
+    accuracyScore.value = 0
+    aiScore.value = 0
+    aiAnalysis.value = ''
     startTime.value = Date.now()
 
+    console.log('Starting speech recognition...')
     const result = await recognizer.start()
+    console.log('Recognition completed, transcript:', result.transcript)
     userTranscript.value = result.transcript
 
     // Calculate accuracy
@@ -392,8 +405,10 @@ const startRecording = async () => {
       aiScore.value
     )
   } catch (err) {
-    error.value = err.message || 'Failed to record. Please check microphone permissions.'
+    console.error('Recording error:', err)
+    error.value = err.message || 'Failed to record. Please check microphone permissions and try again.'
   } finally {
+    console.log('Setting isRecording to false')
     isRecording.value = false
   }
 }

@@ -60,8 +60,8 @@ export class SpeechRecognizer {
     }
 
     this.recognition = new SpeechRecognition()
-    this.recognition.continuous = true // Enable continuous mode for longer pauses
-    this.recognition.interimResults = true // Get interim results
+    this.recognition.continuous = false // Disable continuous for better mobile support
+    this.recognition.interimResults = true
     this.recognition.lang = 'en-US'
     this.recognition.maxAlternatives = 1
     this.isListening = false
@@ -86,8 +86,9 @@ export class SpeechRecognizer {
       this.audioChunks = []
       this.audioBlob = null
       
-      let silenceTimer = null
-      const SILENCE_TIMEOUT = 2000 // 2 seconds of silence before stopping
+      let hasReceivedSpeech = false
+      const MAX_RECORDING_TIME = 30000 // 30 seconds max
+      let maxTimeTimer = null
 
       // Start audio recording
       try {
@@ -119,6 +120,7 @@ export class SpeechRecognizer {
           const transcript = event.results[i][0].transcript
           if (event.results[i].isFinal) {
             this.finalTranscript += transcript + ' '
+            hasReceivedSpeech = true
           } else {
             interim += transcript
           }
@@ -126,36 +128,42 @@ export class SpeechRecognizer {
         
         this.interimTranscript = interim
         
-        // Reset silence timer on new speech
-        if (silenceTimer) {
-          clearTimeout(silenceTimer)
+        // Show user that speech is being detected
+        if (interim || this.finalTranscript) {
+          hasReceivedSpeech = true
         }
-        
-        // Set new silence timer
-        silenceTimer = setTimeout(() => {
-          this.stop()
-        }, SILENCE_TIMEOUT)
       }
 
       this.recognition.onerror = (event) => {
-        if (silenceTimer) clearTimeout(silenceTimer)
+        if (maxTimeTimer) clearTimeout(maxTimeTimer)
         this.isListening = false
         if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
           this.mediaRecorder.stop()
         }
-        if (event.error !== 'no-speech' && event.error !== 'aborted') {
-          reject(new Error(event.error))
+        
+        console.error('Speech recognition error:', event.error)
+        
+        // Don't reject on 'no-speech' if we have some transcript
+        if (event.error === 'no-speech' && hasReceivedSpeech) {
+          // Trigger end to process what we have
+          return
+        }
+        
+        if (event.error === 'no-speech') {
+          reject(new Error('No speech detected. Please speak clearly into the microphone.'))
+        } else if (event.error !== 'aborted') {
+          reject(new Error(`Recognition error: ${event.error}`))
         }
       }
 
       this.recognition.onend = () => {
-        if (silenceTimer) clearTimeout(silenceTimer)
+        if (maxTimeTimer) clearTimeout(maxTimeTimer)
         this.isListening = false
         
         // Stop audio recording
         if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
           this.mediaRecorder.stop()
-          // Wait a bit for the blob to be ready
+          // Wait for the blob to be ready
           setTimeout(() => {
             const finalText = this.finalTranscript.trim()
             if (finalText) {
@@ -165,7 +173,7 @@ export class SpeechRecognizer {
                 audioBlob: this.audioBlob 
               })
             } else {
-              reject(new Error('No speech detected'))
+              reject(new Error('No speech detected. Please try speaking again.'))
             }
           }, 100)
         } else {
@@ -177,7 +185,7 @@ export class SpeechRecognizer {
               audioBlob: this.audioBlob 
             })
           } else {
-            reject(new Error('No speech detected'))
+            reject(new Error('No speech detected. Please try speaking again.'))
           }
         }
       }
@@ -185,6 +193,14 @@ export class SpeechRecognizer {
       try {
         this.recognition.start()
         this.isListening = true
+        
+        // Set maximum recording time to prevent hanging
+        maxTimeTimer = setTimeout(() => {
+          if (this.isListening) {
+            console.log('Max recording time reached, stopping...')
+            this.stop()
+          }
+        }, MAX_RECORDING_TIME)
       } catch (error) {
         reject(error)
       }
