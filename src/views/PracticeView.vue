@@ -18,6 +18,10 @@
               <Info :size="18" />
               <span>About</span>
             </router-link>
+            <router-link to="/contact" class="menu-item">
+              <Mail :size="18" />
+              <span>Contact</span>
+            </router-link>
             <button @click="goToSettings" class="menu-item">
               <Settings :size="18" />
               <span>Settings</span>
