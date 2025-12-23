@@ -245,7 +245,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Mic, TrendingUp, Settings, LogOut, Info } from 'lucide-vue-next'
+import { Mic, TrendingUp, Settings, LogOut, Info, Mail } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth'
 import { usePracticeStore } from '../stores/practice'
 import { Chart, registerables } from 'chart.js'

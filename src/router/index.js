@@ -4,6 +4,7 @@ import LoginView from '../views/LoginView.vue'
 import PracticeView from '../views/PracticeView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import AboutView from '../views/AboutView.vue'
+import ContactView from '../views/ContactView.vue'
 
 const routes = [
   {
@@ -32,6 +33,12 @@ const routes = [
     path: '/about',
     name: 'About',
     component: AboutView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/contact',
+    name: 'Contact',
+    component: ContactView,
     meta: { requiresAuth: true }
   }
 ]

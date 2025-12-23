@@ -219,7 +219,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Mic, TrendingUp, Settings, LogOut, Info } from 'lucide-vue-next'
+import { Mic, TrendingUp, Settings, LogOut, Info, Mail } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth'
 import { usePracticeStore } from '../stores/practice'
 import { speakText, stopSpeaking, SpeechRecognizer, calculateAccuracy, analyzeVoiceWithAI } from '../lib/speech'
