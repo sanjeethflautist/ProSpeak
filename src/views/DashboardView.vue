@@ -1218,18 +1218,68 @@ const deleteAccount = async () => {
 }
 
 @media (max-width: 768px) {
-  .charts-section {
-    grid-template-columns: 1fr;
+  .dashboard-content {
+    padding: 15px;
+  }
+
+  .nav-content {
+    padding: 0 15px;
+  }
+
+  .nav-content h2 {
+    font-size: 1.3rem;
   }
 
   .stats-row {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 15px;
+  }
+
+  .stat-icon {
+    font-size: 1.8rem;
+  }
+
+  .stat-value {
+    font-size: 1.8rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+  }
+
+  .charts-section {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .chart-card {
+    padding: 15px;
+  }
+
+  .chart-card h3 {
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+  }
+
+  .modal-content {
+    padding: 20px;
+    max-height: 90vh;
+  }
+
+  .modal-content h2 {
+    font-size: 1.4rem;
+    margin-bottom: 20px;
   }
 
   .danger-action {
     flex-direction: column;
-    gap: 15px;
+    gap: 12px;
     text-align: center;
+    padding: 15px;
   }
 
   .modal-actions {

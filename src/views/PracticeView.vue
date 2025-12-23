@@ -1420,4 +1420,110 @@ const deleteAccount = async () => {
     transform: scale(1.05);
   }
 }
+
+@media (max-width: 768px) {
+  .practice-content {
+    padding: 0 15px;
+    margin: 20px auto;
+  }
+
+  .nav-content {
+    padding: 0 15px;
+  }
+
+  .nav-content h2 {
+    font-size: 1.3rem;
+  }
+
+  .practice-card {
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  .header h1 {
+    font-size: 1.4rem;
+  }
+
+  .category-badge {
+    font-size: 0.75rem;
+    padding: 5px 12px;
+  }
+
+  .sentence-display {
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .sentence {
+    font-size: 1.2rem;
+    line-height: 1.6;
+  }
+
+  .control-btn {
+    padding: 12px;
+    font-size: 0.95rem;
+  }
+
+  .results {
+    padding: 15px;
+  }
+
+  .results h3 {
+    font-size: 1.1rem;
+  }
+
+  .user-text {
+    font-size: 1rem;
+    padding: 12px;
+  }
+
+  .scores-container {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .score-card {
+    padding: 20px;
+  }
+
+  .score-label {
+    font-size: 0.75rem;
+  }
+
+  .score-value {
+    font-size: 2.5rem;
+  }
+
+  .ai-analysis {
+    padding: 20px;
+  }
+
+  .ai-analysis h4 {
+    font-size: 1.1rem;
+  }
+
+  .ai-analysis p {
+    font-size: 0.95rem;
+  }
+
+  .modal-content {
+    padding: 20px;
+    max-height: 90vh;
+  }
+
+  .modal-content h2 {
+    font-size: 1.4rem;
+    margin-bottom: 20px;
+  }
+
+  .danger-action {
+    flex-direction: column;
+    gap: 12px;
+    padding: 15px;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+}
 </style>
