@@ -14,6 +14,10 @@
               <TrendingUp :size="18" />
               <span>Dashboard</span>
             </router-link>
+            <button @click="goToSettings" class="menu-item">
+              <Settings :size="18" />
+              <span>Settings</span>
+            </button>
             <router-link to="/about" class="menu-item">
               <Info :size="18" />
               <span>About</span>
@@ -26,10 +30,6 @@
               <Mail :size="18" />
               <span>Contact</span>
             </router-link>
-            <button @click="goToSettings" class="menu-item">
-              <Settings :size="18" />
-              <span>Settings</span>
-            </button>
             <button @click="handleLogout" class="menu-item logout">
               <LogOut :size="18" />
               <span>Logout</span>
