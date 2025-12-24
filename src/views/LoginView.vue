@@ -46,6 +46,9 @@
             placeholder="••••••••"
             minlength="6"
           />
+          <div v-if="activeTab === 'login'" class="forgot-password-link">
+            <router-link to="/forgot-password">Forgot password?</router-link>
+          </div>
         </div>
 
         <button type="submit" class="submit-btn" :disabled="loading">
@@ -198,6 +201,24 @@ const handleSubmit = async () => {
 .form-group input:focus {
   outline: none;
   border-color: #667eea;
+}
+
+.forgot-password-link {
+  text-align: right;
+  margin-top: 8px;
+}
+
+.forgot-password-link a {
+  color: #667eea;
+  font-size: 0.9rem;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.forgot-password-link a:hover {
+  color: #764ba2;
+  text-decoration: underline;
 }
 
 .submit-btn {

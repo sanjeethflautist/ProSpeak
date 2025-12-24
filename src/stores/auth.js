@@ -132,6 +132,22 @@ export const useAuthStore = defineStore('auth', {
       this.session = null
     },
 
+    async sendPasswordResetEmail(email) {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      })
+      
+      if (error) throw error
+    },
+
+    async updatePassword(newPassword) {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+      
+      if (error) throw error
+    },
+
     async deleteAccount() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
