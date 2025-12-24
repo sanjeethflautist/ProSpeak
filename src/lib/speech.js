@@ -23,8 +23,13 @@ export const speakText = (text) => {
       const isPunctuation = /[,.;:!?]/.test(chunk)
       
       if (isPunctuation) {
-        // Add pause based on punctuation type
-        const pauseDuration = chunk === '.' || chunk === '!' || chunk === '?' ? 50 : 30
+        // Add varied pause based on punctuation type with randomization
+        let pauseDuration
+        if (chunk === '.' || chunk === '!' || chunk === '?') {
+          pauseDuration = 20 + Math.random() * 30 // 20-50ms
+        } else {
+          pauseDuration = 10 + Math.random() * 20 // 10-30ms
+        }
         setTimeout(() => {
           currentIndex++
           speakNextChunk()
@@ -54,9 +59,9 @@ export const speakText = (text) => {
         utterance.voice = preferredVoice
       }
 
-      // Add varied pitch variation for more expressive speech
-      // Vary pitch between 0.9-1.2 based on chunk position
-      const pitchVariation = 1.05 + (Math.sin(currentIndex * 0.5) * 0.15)
+      // Add random pitch variation for unpredictable, natural speech
+      // Vary pitch randomly between 0.9-1.2
+      const pitchVariation = 0.9 + Math.random() * 0.3
       
       // Optimized settings for clear, natural speech with variation
       utterance.rate = 0.90 // Natural conversational pace
