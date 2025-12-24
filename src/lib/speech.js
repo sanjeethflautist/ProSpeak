@@ -9,37 +9,69 @@ export const speakText = (text) => {
     // Cancel any ongoing speech
     window.speechSynthesis.cancel()
 
-    const utterance = new SpeechSynthesisUtterance(text)
-    
-    // Get available voices and select a natural-sounding one
-    const voices = window.speechSynthesis.getVoices()
-    
-    // Priority order: Google/Chrome voices > Microsoft voices > Others
-    const preferredVoice = voices.find(voice => 
-      voice.lang.startsWith('en') && (
-        voice.name.includes('Google') ||
-        voice.name.includes('Chrome') ||
-        voice.name.includes('Natural') ||
-        voice.name.includes('Premium') ||
-        voice.name.includes('Enhanced')
-      )
-    ) || voices.find(voice => 
-      voice.lang.startsWith('en') && voice.name.includes('Microsoft')
-    ) || voices.find(voice => voice.lang.startsWith('en'))
+    // Split text at punctuation for natural pauses
+    const chunks = text.split(/([,.;:!?])/).filter(chunk => chunk.trim())
+    let currentIndex = 0
 
-    if (preferredVoice) {
-      utterance.voice = preferredVoice
+    const speakNextChunk = () => {
+      if (currentIndex >= chunks.length) {
+        resolve()
+        return
+      }
+
+      const chunk = chunks[currentIndex]
+      const isPunctuation = /[,.;:!?]/.test(chunk)
+      
+      if (isPunctuation) {
+        // Add pause based on punctuation type
+        const pauseDuration = chunk === '.' || chunk === '!' || chunk === '?' ? 400 : 250
+        setTimeout(() => {
+          currentIndex++
+          speakNextChunk()
+        }, pauseDuration)
+        return
+      }
+
+      const utterance = new SpeechSynthesisUtterance(chunk)
+      
+      // Get available voices and select a natural-sounding one
+      const voices = window.speechSynthesis.getVoices()
+      
+      // Priority order: Google/Chrome voices > Microsoft voices > Others
+      const preferredVoice = voices.find(voice => 
+        voice.lang.startsWith('en') && (
+          voice.name.includes('Google') ||
+          voice.name.includes('Chrome') ||
+          voice.name.includes('Natural') ||
+          voice.name.includes('Premium') ||
+          voice.name.includes('Enhanced')
+        )
+      ) || voices.find(voice => 
+        voice.lang.startsWith('en') && voice.name.includes('Microsoft')
+      ) || voices.find(voice => voice.lang.startsWith('en'))
+
+      if (preferredVoice) {
+        utterance.voice = preferredVoice
+      }
+
+      // Optimized settings for clear, natural speech
+      utterance.rate = 0.90 // Natural conversational pace
+      utterance.pitch = 0.95 // Warmer, more natural pitch
+      utterance.volume = 0.95 // Clear volume
+
+      utterance.onend = () => {
+        currentIndex++
+        speakNextChunk()
+      }
+      
+      utterance.onerror = (error) => {
+        reject(error)
+      }
+
+      window.speechSynthesis.speak(utterance)
     }
 
-    // Optimized settings for clear, natural speech
-    utterance.rate = 0.90 // Natural conversational pace
-    utterance.pitch = 1.0 // Natural pitch
-    utterance.volume = 0.95 // Clear volume
-
-    utterance.onend = () => resolve()
-    utterance.onerror = (error) => reject(error)
-
-    window.speechSynthesis.speak(utterance)
+    speakNextChunk()
   })
 }
 
