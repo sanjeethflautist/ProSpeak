@@ -68,7 +68,12 @@ const handleSubmit = async () => {
     success.value = 'Password reset link sent! Check your email inbox.'
     emailSent.value = true
   } catch (err) {
-    error.value = err.message || 'Failed to send reset email. Please try again.'
+    console.error('Password reset error:', err)
+    if (err.message && err.message.includes('500')) {
+      error.value = 'Configuration error. Please contact support or try again later.'
+    } else {
+      error.value = err.message || 'Failed to send reset email. Please try again.'
+    }
   } finally {
     loading.value = false
   }
