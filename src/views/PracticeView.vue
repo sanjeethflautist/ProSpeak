@@ -765,6 +765,8 @@ const deleteAccount = async () => {
   border-left: 5px solid #667eea;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   transition: all 0.3s ease;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .sentence-display:hover {
@@ -773,12 +775,15 @@ const deleteAccount = async () => {
 }
 
 .sentence {
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   line-height: 1.8;
   color: #2c3e50;
   margin: 0;
   font-weight: 600;
   letter-spacing: 0.2px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 .controls {
@@ -854,6 +859,11 @@ const deleteAccount = async () => {
   margin: 15px 0;
   font-size: 1.1rem;
   color: #333;
+  max-height: 300px;
+  overflow-y: auto;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.6;
 }
 
 .scores-container {
@@ -1482,11 +1492,12 @@ const deleteAccount = async () => {
   .sentence-display {
     padding: 15px;
     margin-bottom: 15px;
+    max-height: 300px;
   }
 
   .sentence {
-    font-size: 1rem;
-    line-height: 1.5;
+    font-size: 0.95rem;
+    line-height: 1.6;
   }
 
   .control-btn {
@@ -1503,8 +1514,9 @@ const deleteAccount = async () => {
   }
 
   .user-text {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     padding: 10px;
+    max-height: 200px;
   }
 
   .scores-container {
