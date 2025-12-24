@@ -126,7 +126,7 @@
           </div>
 
           <div v-if="aiAnalysis" class="ai-analysis">
-            <h4>🎯 AI Coach Feedback:</h4>
+            <h4>{{ aiScore > 0 ? '🎯 AI Coach Feedback:' : 'AI analysis not performed' }}</h4>
             <p>{{ aiAnalysis }}</p>
           </div>
 
@@ -413,31 +413,37 @@ const startRecording = async () => {
     // Calculate accuracy
     accuracyScore.value = parseFloat(calculateAccuracy(sentence.value.sentence, result.transcript))
 
-    // Get AI analysis with audio
-    console.log('Starting AI analysis...')
-    analyzingAI.value = true
-    try {
-      const aiResult = await analyzeVoiceWithAI(
-        result.transcript, 
-        sentence.value.sentence, 
-        result.audioBlob
-        // API key will be retrieved server-side from encrypted storage
-      )
-      console.log('AI Analysis result:', aiResult)
-      console.log('AI Result type:', typeof aiResult)
-      console.log('AI Result keys:', aiResult ? Object.keys(aiResult) : 'null')
-      if (aiResult && aiResult.aiScore) {
-        aiAnalysis.value = aiResult.analysis
-        aiScore.value = aiResult.aiScore
-        console.log('✅ AI Score set to:', aiScore.value)
-        console.log('✅ AI Analysis set to:', aiAnalysis.value)
-      } else {
-        console.warn('AI analysis returned null or missing aiScore:', aiResult)
+    // Get AI analysis with audio (only if completeness score >= 40%)
+    if (accuracyScore.value >= 40) {
+      console.log('Starting AI analysis...')
+      analyzingAI.value = true
+      try {
+        const aiResult = await analyzeVoiceWithAI(
+          result.transcript, 
+          sentence.value.sentence, 
+          result.audioBlob
+          // API key will be retrieved server-side from encrypted storage
+        )
+        console.log('AI Analysis result:', aiResult)
+        console.log('AI Result type:', typeof aiResult)
+        console.log('AI Result keys:', aiResult ? Object.keys(aiResult) : 'null')
+        if (aiResult && aiResult.aiScore) {
+          aiAnalysis.value = aiResult.analysis
+          aiScore.value = aiResult.aiScore
+          console.log('✅ AI Score set to:', aiScore.value)
+          console.log('✅ AI Analysis set to:', aiAnalysis.value)
+        } else {
+          console.warn('AI analysis returned null or missing aiScore:', aiResult)
+        }
+      } catch (aiError) {
+        console.error('AI analysis failed:', aiError)
+      } finally {
+        analyzingAI.value = false
       }
-    } catch (aiError) {
-      console.error('AI analysis failed:', aiError)
-    } finally {
-      analyzingAI.value = false
+    } else {
+      console.log('Skipping AI analysis - completeness score below 40%')
+      aiAnalysis.value = 'Speak more to perform AI analysis. The sentence was too short to provide meaningful feedback.'
+      aiScore.value = 0
     }
 
     // Calculate duration
@@ -1664,8 +1670,8 @@ const deleteAccount = async () => {
 
 @media (max-width: 768px) {
   .practice-content {
-    padding: 0 12px;
-    margin: 15px auto;
+    padding: 0;
+    margin: 15px 0;
   }
 
   .nav-content {
@@ -1682,7 +1688,7 @@ const deleteAccount = async () => {
   }
 
   .practice-card {
-    padding: 15px;
+    padding: 15px 12px;
     border-radius: 12px;
   }
 
@@ -1702,7 +1708,7 @@ const deleteAccount = async () => {
   }
 
   .sentence-display {
-    padding: 15px;
+    padding: 15px 12px;
     margin-bottom: 15px;
     max-height: 350px;
   }
@@ -1762,7 +1768,7 @@ const deleteAccount = async () => {
   }
 
   .score-card {
-    padding: 15px;
+    padding: 15px 12px;
   }
 
   .score-label {
@@ -1782,7 +1788,7 @@ const deleteAccount = async () => {
   }
 
   .ai-analysis {
-    padding: 15px;
+    padding: 15px 12px;
   }
 
   .ai-analysis h4 {
@@ -1795,7 +1801,7 @@ const deleteAccount = async () => {
   }
 
   .modal-content {
-    padding: 15px;
+    padding: 15px 12px;
     max-height: 92vh;
     font-size: 0.9rem;
   }

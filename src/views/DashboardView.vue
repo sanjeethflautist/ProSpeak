@@ -2,7 +2,9 @@
   <div class="dashboard-container">
     <nav class="navbar">
       <div class="nav-content">
-        <h2><span class="logo-icon">PS</span> ProSpeak</h2>
+        <router-link to="/practice" class="logo-link">
+          <h2><span class="logo-icon">PS</span> ProSpeak</h2>
+        </router-link>
         <div class="nav-actions">
           <button @click="showMenu = !showMenu" class="menu-btn">☰ Menu</button>
           <div v-if="showMenu" class="dropdown-menu" @click="showMenu = false">
@@ -110,8 +112,11 @@
                 <span class="session-category">{{ formatCategory(session.daily_sentences?.category) }}</span>
                 <span class="session-duration">⏱️ {{ session.duration_seconds }}s</span>
                 <span class="session-status">
-                  {{ session.completed ? '✅ Completed' : '⏳ In Progress' }}
+                  {{ session.completed ? '✅ Completed' : (session.accuracy_score < 70 ? '❌ Incomplete' : '⏳ In Progress') }}
                 </span>
+                <button @click="deleteSession(session.id)" class="delete-session-btn" title="Delete this session">
+                  <Trash2 :size="16" />
+                </button>
               </div>
             </div>
           </div>
@@ -249,9 +254,10 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Mic, TrendingUp, Settings, LogOut, Info, Mail } from 'lucide-vue-next'
+import { Mic, TrendingUp, Settings, LogOut, Info, Mail, Trash2 } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth'
 import { usePracticeStore } from '../stores/practice'
+import { supabase } from '../lib/supabase'
 import { Chart, registerables } from 'chart.js'
 
 Chart.register(...registerables)
@@ -291,11 +297,7 @@ const averageAIScore = computed(() => {
 onMounted(async () => {
   try {
     // Fetch data
-    progress.value = await practiceStore.fetchUserProgress()
-    sessions.value = await practiceStore.fetchRecentSessions(10)
-    
-    // Check if user has API key
-    hasApiKey.value = await authStore.hasGeminiApiKey()
+    await loadDashboard()
 
     // Listen for settings open event from PracticeView
     window.addEventListener('open-settings', () => {
@@ -309,7 +311,6 @@ onMounted(async () => {
     }, 100)
   } catch (error) {
     console.error('Error loading dashboard:', error)
-  } finally {
     loading.value = false
   }
 })
@@ -324,21 +325,33 @@ const createAccuracyChart = () => {
     type: 'line',
     data: {
       labels: data.map(s => formatDateShort(s.created_at)),
-      datasets: [{
-        label: 'Accuracy %',
-        data: data.map(s => parseFloat(s.accuracy_score)),
-        borderColor: '#667eea',
-        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-        tension: 0.4,
-        fill: true
-      }]
+      datasets: [
+        {
+          label: 'Completeness %',
+          data: data.map(s => parseFloat(s.accuracy_score)),
+          borderColor: '#667eea',
+          backgroundColor: 'rgba(102, 126, 234, 0.1)',
+          tension: 0.4,
+          fill: true
+        },
+        {
+          label: 'AI Score %',
+          data: data.map(s => s.ai_score ? parseFloat(s.ai_score) : null),
+          borderColor: '#764ba2',
+          backgroundColor: 'rgba(118, 75, 162, 0.1)',
+          tension: 0.4,
+          fill: true,
+          spanGaps: true
+        }
+      ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
         legend: {
-          display: false
+          display: true,
+          position: 'top'
         }
       },
       scales: {
@@ -427,9 +440,64 @@ const formatCategory = (category) => {
     .join(' ')
 }
 
+const loadDashboard = async () => {
+  loading.value = true
+  try {
+    progress.value = await practiceStore.fetchUserProgress()
+    sessions.value = await practiceStore.fetchRecentSessions(10)
+    hasApiKey.value = await authStore.hasGeminiApiKey()
+  } catch (error) {
+    console.error('Error loading dashboard:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
 const handleLogout = async () => {
   await authStore.signOut()
   router.push('/login')
+}
+
+const deleteSession = async (sessionId) => {
+  if (!confirm('Delete this session? This will affect your overall statistics.')) {
+    return
+  }
+
+  try {
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      alert('You must be logged in to delete sessions.')
+      return
+    }
+
+    const { error } = await supabase
+      .from('practice_sessions')
+      .delete()
+      .eq('id', sessionId)
+      .eq('user_id', user.id)
+
+    if (error) throw error
+
+    // Show success message
+    alert('Session deleted successfully!')
+
+    // Reload dashboard data
+    await loadDashboard()
+    
+    // Recreate charts with updated data
+    if (accuracyChart) {
+      accuracyChart.destroy()
+    }
+    if (frequencyChart) {
+      frequencyChart.destroy()
+    }
+    createAccuracyChart()
+    createFrequencyChart()
+  } catch (error) {
+    console.error('Error deleting session:', error)
+    alert('Failed to delete session. Please try again.')
+  }
 }
 
 const handleLogoutFromSettings = async () => {
@@ -898,6 +966,7 @@ const deleteAccount = async () => {
   gap: 12px;
   font-size: 0.85rem;
   margin-top: 8px;
+  align-items: center;
 }
 
 .session-category {
@@ -914,6 +983,24 @@ const deleteAccount = async () => {
 
 .session-status {
   color: #666;
+}
+
+.delete-session-btn {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: #dc3545;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.delete-session-btn:hover {
+  background: rgba(220, 53, 69, 0.1);
+  transform: scale(1.1);
 }
 
 .achievements-card {
@@ -1197,6 +1284,17 @@ const deleteAccount = async () => {
   font-weight: bold;
   font-size: 0.9em;
   margin-right: 8px;
+}
+
+.logo-link {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.logo-link:hover h2 {
+  opacity: 0.8;
+  transition: opacity 0.2s;
 }
 
 .confirm-modal ul {
