@@ -53,7 +53,12 @@
       <div v-else-if="sentence" class="practice-card">
         <div class="header">
           <h1>Today's Practice</h1>
-          <span class="category-badge">{{ formatCategory(sentence.category) }}</span>
+          <div class="header-actions">
+            <span class="category-badge">{{ formatCategory(sentence.category) }}</span>
+            <button @click="refreshSentence" class="refresh-btn" :disabled="loading" title="Get a different sentence">
+              <RefreshCw :size="18" />
+            </button>
+          </div>
         </div>
 
         <div class="sentence-display">
@@ -62,7 +67,8 @@
 
         <div class="controls">
           <button @click="toggleAudio" class="control-btn play-btn">
-            <span class="btn-icon">{{ isPlaying ? '⏹️' : '🔊' }}</span>
+            <Square v-if="isPlaying" :size="18" class="btn-icon-svg" />
+            <Volume2 v-else :size="18" class="btn-icon-svg" />
             <span class="btn-text">{{ isPlaying ? 'Stop' : 'Listen' }}</span>
           </button>
 
@@ -236,7 +242,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Mic, TrendingUp, Settings, LogOut, Info, Mail } from 'lucide-vue-next'
+import { Mic, TrendingUp, Settings, LogOut, Info, Mail, RefreshCw, Volume2, Square } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth'
 import { usePracticeStore } from '../stores/practice'
 import { speakText, stopSpeaking, SpeechRecognizer, calculateAccuracy, analyzeVoiceWithAI } from '../lib/speech'
@@ -290,6 +296,25 @@ const formatCategory = (category) => {
     .split('_')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ')
+}
+
+const refreshSentence = async () => {
+  try {
+    loading.value = true
+    error.value = ''
+    // Reset current practice state
+    userTranscript.value = ''
+    accuracyScore.value = 0
+    aiScore.value = 0
+    aiAnalysis.value = ''
+    recordedAudioBlob.value = null
+    // Fetch a new sentence (will get a random one from today's sentences)
+    sentence.value = await practiceStore.fetchTodaySentence()
+  } catch (err) {
+    error.value = err.message || 'Failed to load new sentence'
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(async () => {
@@ -799,6 +824,12 @@ const deleteAccount = async () => {
   font-size: 2rem;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .category-badge {
   background: #667eea;
   color: white;
@@ -807,6 +838,33 @@ const deleteAccount = async () => {
   font-size: 0.85rem;
   font-weight: 500;
   text-transform: capitalize;
+}
+
+.refresh-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.refresh-btn:hover:not(:disabled) {
+  transform: rotate(180deg) scale(1.1);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .sentence-display {
@@ -837,8 +895,8 @@ const deleteAccount = async () => {
   letter-spacing: 0.2px;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  word-break: break-word;
-  hyphens: auto;
+  word-break: normal;
+  hyphens: none;
   white-space: normal;
   max-width: 100%;
   display: block;
@@ -987,7 +1045,8 @@ const deleteAccount = async () => {
   overflow-x: hidden;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  word-break: break-word;
+  word-break: normal;
+  hyphens: none;
   white-space: normal;
   line-height: 1.6;
   max-width: 100%;
