@@ -121,27 +121,38 @@ Speaking Rate: ${wordsPerMinute} words per minute ${wordsPerMinute < 120 ? '(slo
 Audio Duration: ${audioDuration.toFixed(1)} seconds.`
     }
 
-    const prompt = `You are an expert speech coach. Analyze this practice session:
+    const prompt = `You are an expert speech coach. Analyze this practice session by comparing the spoken version against the original sentence:
 
-Original sentence: "${originalText}"
-Spoken version: "${spokenText}"
+ORIGINAL SENTENCE: "${originalText}"
+SPOKEN VERSION: "${spokenText}"
 ${audioAnalysis}
 
 Provide your analysis in TWO parts:
 
-1. SCORE (0-100): Rate the overall performance considering accuracy, clarity, pace, and delivery. Output format: "SCORE: XX"
+1. SCORE (0-100): Rate overall performance based on:
+   - Word accuracy (compare word-by-word: substitutions, omissions, additions)
+   - Pronunciation clarity
+   - Speaking pace (ideal: 120-160 WPM)
+   - Overall delivery quality
+   Output format: "SCORE: XX"
 
-2. FEEDBACK (3-4 sentences): Provide encouraging analysis covering:
-   - Accuracy and clarity of the spoken text
-   - Speaking pace and rhythm ${audioAnalysis ? '(based on the audio metrics above)' : ''}
-   - Suggested improvements for pronunciation, pacing, or pauses
-   - One positive observation and encouragement
+2. FEEDBACK (4-5 sentences maximum): Provide structured, actionable feedback:
+   
+   a) ACCURACY: Identify specific word substitutions or errors (e.g., "monolithic" → "monalities", "platform" → "blood form"). Be precise.
+   
+   b) PRONUNCIATION: Point out 2-3 key words that need clearer pronunciation. Suggest focusing on these specific terms.
+   
+   c) PACE & RHYTHM: Comment on speaking speed ${audioAnalysis ? '(based on measured WPM)' : ''}. If too fast/slow, suggest slowing down or speeding up. Mention where strategic pauses would help (after key phrases).
+   
+   d) STRENGTHS: Acknowledge one positive aspect (energy, flow, consistency, etc.).
+   
+   e) ACTION ITEM: End with ONE specific practice tip for immediate improvement.
 
 Output format:
 SCORE: XX
-FEEDBACK: Your detailed feedback here...
+FEEDBACK: [Your structured feedback covering accuracy, pronunciation, pace, strengths, and one action item]
 
-Keep it concise, actionable, and encouraging.`
+Keep it concise (4-5 sentences), specific, and actionable. Focus on comparing the original vs spoken text word-by-word.`
 
     console.log('Calling Gemini API...')
     console.log('Using model: gemini-2.5-flash')
