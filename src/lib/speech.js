@@ -12,6 +12,7 @@ export const speakText = (text) => {
     // Split text at punctuation for natural pauses
     const chunks = text.split(/([,.;:!?])/).filter(chunk => chunk.trim())
     let currentIndex = 0
+    let currentPitch = 1.0 // Start with neutral pitch
 
     const speakNextChunk = () => {
       if (currentIndex >= chunks.length) {
@@ -59,13 +60,14 @@ export const speakText = (text) => {
         utterance.voice = preferredVoice
       }
 
-      // Add random pitch variation for unpredictable, natural speech
-      // Vary pitch randomly between 0.9-1.2
-      const pitchVariation = 0.9 + Math.random() * 0.3
+      // Gradual pitch variation for natural speech
+      // Gently drift the pitch up or down each chunk
+      const pitchChange = (Math.random() - 0.5) * 0.1 // Small change: -0.05 to +0.05
+      currentPitch = Math.max(0.9, Math.min(1.05, currentPitch + pitchChange))
       
-      // Optimized settings for clear, natural speech with variation
+      // Optimized settings for clear, natural speech with gradual variation
       utterance.rate = 0.90 // Natural conversational pace
-      utterance.pitch = pitchVariation // Varied pitch for naturalness
+      utterance.pitch = currentPitch // Gradually varying pitch
       utterance.volume = 0.95 // Clear volume
 
       utterance.onend = () => {
