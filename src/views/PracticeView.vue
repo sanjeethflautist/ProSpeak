@@ -62,7 +62,8 @@
 
         <div class="controls">
           <button @click="toggleAudio" class="control-btn play-btn">
-            {{ isPlaying ? '⏹️ Stop' : '🔊 Listen' }}
+            <span class="btn-icon">{{ isPlaying ? '⏹️' : '🔊' }}</span>
+            <span class="btn-text">{{ isPlaying ? 'Stop' : 'Listen' }}</span>
           </button>
 
           <button 
@@ -70,12 +71,24 @@
             class="control-btn record-btn"
             :class="{ recording: isRecording }"
           >
-            {{ isRecording ? '🎤 Recording...' : '🎤 Record Your Voice' }}
+            <Mic :size="20" class="btn-icon-svg" />
+            <span class="btn-text">{{ isRecording ? 'Stop Recording' : 'Start Recording' }}</span>
           </button>
         </div>
 
         <div v-if="userTranscript" class="results">
-          <h3>Your Recording:</h3>
+          <div class="results-header">
+            <h3>Your Recording:</h3>
+            <button 
+              v-if="recordedAudioBlob" 
+              @click="togglePlayRecording" 
+              class="play-recording-btn"
+              :class="{ playing: isPlayingRecording }"
+            >
+              <span v-if="isPlayingRecording">⏸️ Pause</span>
+              <span v-else>▶️ Play Your Voice</span>
+            </button>
+          </div>
           <p class="user-text">{{ userTranscript }}</p>
 
           <div class="scores-container">
@@ -253,6 +266,9 @@ const apiKeyInput = ref('')
 const savingApiKey = ref(false)
 const deletingApiKey = ref(false)
 const hasApiKey = ref(false)
+const recordedAudioBlob = ref(null)
+const isPlayingRecording = ref(false)
+const audioElement = ref(null)
 
 let recognizer = null
 
@@ -367,6 +383,7 @@ const startRecording = async () => {
     const result = await recognizer.start()
     console.log('Recognition completed, transcript:', result.transcript)
     userTranscript.value = result.transcript
+    recordedAudioBlob.value = result.audioBlob // Store for playback
 
     // Calculate accuracy
     accuracyScore.value = parseFloat(calculateAccuracy(sentence.value.sentence, result.transcript))
@@ -423,6 +440,39 @@ const tryAgain = () => {
   aiAnalysis.value = ''
   aiScore.value = 0
   error.value = ''
+  recordedAudioBlob.value = null
+  isPlayingRecording.value = false
+  if (audioElement.value) {
+    audioElement.value.pause()
+    audioElement.value = null
+  }
+}
+
+const togglePlayRecording = () => {
+  if (!recordedAudioBlob.value) return
+  
+  if (isPlayingRecording.value) {
+    audioElement.value?.pause()
+    isPlayingRecording.value = false
+    return
+  }
+  
+  const audioUrl = URL.createObjectURL(recordedAudioBlob.value)
+  audioElement.value = new Audio(audioUrl)
+  
+  audioElement.value.onended = () => {
+    isPlayingRecording.value = false
+    URL.revokeObjectURL(audioUrl)
+  }
+  
+  audioElement.value.onerror = () => {
+    isPlayingRecording.value = false
+    error.value = 'Failed to play recording'
+    URL.revokeObjectURL(audioUrl)
+  }
+  
+  audioElement.value.play()
+  isPlayingRecording.value = true
 }
 
 const goToSettings = async () => {
@@ -728,6 +778,8 @@ const deleteAccount = async () => {
   box-shadow: 0 20px 80px rgba(0, 0, 0, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.6);
   transition: all 0.3s ease;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 .practice-card:hover {
@@ -759,14 +811,16 @@ const deleteAccount = async () => {
 
 .sentence-display {
   background: linear-gradient(135deg, rgba(102, 126, 234, 0.06) 0%, rgba(118, 75, 162, 0.06) 100%);
-  padding: 35px;
+  padding: 30px;
   border-radius: 18px;
   margin-bottom: 30px;
   border-left: 5px solid #667eea;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   transition: all 0.3s ease;
-  max-height: 400px;
+  max-height: 500px;
   overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 .sentence-display:hover {
@@ -775,32 +829,54 @@ const deleteAccount = async () => {
 }
 
 .sentence {
-  font-size: 1.3rem;
-  line-height: 1.8;
+  font-size: 1.15rem;
+  line-height: 1.75;
   color: #2c3e50;
   margin: 0;
   font-weight: 600;
   letter-spacing: 0.2px;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  word-break: break-word;
   hyphens: auto;
+  white-space: normal;
+  max-width: 100%;
+  display: block;
 }
 
 .controls {
   display: flex;
   gap: 15px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .control-btn {
   flex: 1;
-  padding: 16px;
+  min-width: 200px;
+  padding: 18px 24px;
   border: none;
   border-radius: 12px;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-icon {
+  font-size: 1.3rem;
+}
+
+.btn-icon-svg {
+  stroke-width: 2.5;
+}
+
+.btn-text {
+  font-size: 1.05rem;
 }
 
 .play-btn {
@@ -813,16 +889,24 @@ const deleteAccount = async () => {
 }
 
 .record-btn {
-  background: #f44336;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
 }
 
 .record-btn.recording {
   animation: pulse 1.5s infinite;
+  background: linear-gradient(135deg, #f44336 0%, #e91e63 100%);
+  box-shadow: 0 4px 20px rgba(244, 67, 54, 0.5);
 }
 
 .record-btn:hover:not(:disabled) {
-  background: #da190b;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(102, 126, 234, 0.5);
+}
+
+.record-btn.recording:hover:not(:disabled) {
+  box-shadow: 0 6px 25px rgba(244, 67, 54, 0.6);
 }
 
 .retry-btn {
@@ -847,6 +931,45 @@ const deleteAccount = async () => {
   border-radius: 15px;
 }
 
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.play-recording-btn {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);
+}
+
+.play-recording-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+}
+
+.play-recording-btn.playing {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.3);
+}
+
+.play-recording-btn.playing:hover {
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+}
+
 .results h3 {
   margin-top: 0;
   color: #667eea;
@@ -857,13 +980,18 @@ const deleteAccount = async () => {
   background: white;
   border-radius: 10px;
   margin: 15px 0;
-  font-size: 1.1rem;
+  font-size: 1rem;
   color: #333;
-  max-height: 300px;
+  max-height: 350px;
   overflow-y: auto;
+  overflow-x: hidden;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
   line-height: 1.6;
+  max-width: 100%;
+  display: block;
 }
 
 .scores-container {
@@ -1517,21 +1645,46 @@ const deleteAccount = async () => {
   .sentence-display {
     padding: 15px;
     margin-bottom: 15px;
-    max-height: 300px;
+    max-height: 350px;
   }
 
   .sentence {
     font-size: 0.95rem;
-    line-height: 1.6;
+    line-height: 1.65;
   }
 
   .control-btn {
-    padding: 10px;
-    font-size: 0.85rem;
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    min-width: 150px;
+  }
+
+  .btn-text {
+    font-size: 0.9rem;
+  }
+
+  .btn-icon {
+    font-size: 1.1rem;
+  }
+
+  .btn-icon-svg {
+    width: 16px;
+    height: 16px;
   }
 
   .results {
     padding: 12px;
+  }
+
+  .results-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .play-recording-btn {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    width: 100%;
   }
 
   .results h3 {

@@ -31,10 +31,10 @@ export const speakText = (text) => {
       utterance.voice = preferredVoice
     }
 
-    // Optimized settings for conversational, natural speech
-    utterance.rate = 0.92 // Conversational pace
-    utterance.pitch = 1.05 // Slightly higher for warmth
-    utterance.volume = 0.9 // Comfortable volume
+    // Optimized settings for clear, natural speech
+    utterance.rate = 0.90 // Natural conversational pace
+    utterance.pitch = 1.0 // Natural pitch
+    utterance.volume = 0.95 // Clear volume
 
     utterance.onend = () => resolve()
     utterance.onerror = (error) => reject(error)
