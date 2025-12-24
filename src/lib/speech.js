@@ -24,7 +24,7 @@ export const speakText = (text) => {
       
       if (isPunctuation) {
         // Add pause based on punctuation type
-        const pauseDuration = chunk === '.' || chunk === '!' || chunk === '?' ? 400 : 250
+        const pauseDuration = chunk === '.' || chunk === '!' || chunk === '?' ? 200 : 100
         setTimeout(() => {
           currentIndex++
           speakNextChunk()
