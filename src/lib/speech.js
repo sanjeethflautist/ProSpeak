@@ -76,6 +76,9 @@ export class SpeechRecognizer {
     // Silence detection for natural pauses
     this.silenceTimer = null
     this.lastSpeechTime = null
+    this.shouldStopListening = false
+    this.resolveCallback = null
+    this.rejectCallback = null
   }
 
   async start() {
@@ -89,6 +92,9 @@ export class SpeechRecognizer {
       this.interimTranscript = ''
       this.audioChunks = []
       this.audioBlob = null
+      this.shouldStopListening = false
+      this.resolveCallback = resolve
+      this.rejectCallback = reject
       
       let hasReceivedSpeech = false
       const MAX_RECORDING_TIME = 30000 // 30 seconds max
@@ -184,6 +190,20 @@ export class SpeechRecognizer {
       }
 
       this.recognition.onend = () => {
+        console.log('Recognition ended, shouldStop:', this.shouldStopListening)
+        
+        // If we shouldn't stop (auto-ended), restart recognition to continue listening
+        if (!this.shouldStopListening && this.isListening) {
+          console.log('Auto-restarting recognition to continue listening...')
+          try {
+            this.recognition.start()
+          } catch (error) {
+            console.error('Failed to restart recognition:', error)
+          }
+          return
+        }
+        
+        // Actually stopping - clean up and resolve
         if (maxTimeTimer) clearTimeout(maxTimeTimer)
         if (this.silenceTimer) clearTimeout(this.silenceTimer)
         this.isListening = false
@@ -195,25 +215,25 @@ export class SpeechRecognizer {
           setTimeout(() => {
             const finalText = this.finalTranscript.trim()
             if (finalText) {
-              resolve({ 
+              this.resolveCallback({ 
                 transcript: finalText, 
                 confidence: 0.9,
                 audioBlob: this.audioBlob 
               })
             } else {
-              reject(new Error('No speech detected. Please try speaking again.'))
+              this.rejectCallback(new Error('No speech detected. Please try speaking again.'))
             }
           }, 100)
         } else {
           const finalText = this.finalTranscript.trim()
           if (finalText) {
-            resolve({ 
+            this.resolveCallback({ 
               transcript: finalText, 
               confidence: 0.9,
               audioBlob: this.audioBlob 
             })
           } else {
-            reject(new Error('No speech detected. Please try speaking again.'))
+            this.rejectCallback(new Error('No speech detected. Please try speaking again.'))
           }
         }
       }
@@ -236,13 +256,15 @@ export class SpeechRecognizer {
   }
 
   stop() {
+    console.log('Stop called')
+    this.shouldStopListening = true
     if (this.silenceTimer) {
       clearTimeout(this.silenceTimer)
       this.silenceTimer = null
     }
     if (this.isListening) {
       this.recognition.stop()
-      this.isListening = false
+      // isListening will be set to false in onend
     }
   }
 }
