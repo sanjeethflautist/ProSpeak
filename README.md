@@ -1,4 +1,4 @@
-# ProSpeak 🎤
+# ProSpeakAI 🎤
 
 **Professional Communication Practice App**
 

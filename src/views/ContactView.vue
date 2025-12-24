@@ -2,7 +2,7 @@
   <div class="contact-container">
     <nav class="navbar">
       <div class="nav-content">
-        <h2><span class="logo-icon">PS</span> ProSpeak</h2>
+        <h2><span class="logo-icon">PS</span> ProSpeakAI</h2>
         <div class="nav-actions">
           <button @click="showMenu = !showMenu" class="menu-btn">☰ Menu</button>
           <div v-if="showMenu" class="dropdown-menu" @click="showMenu = false">

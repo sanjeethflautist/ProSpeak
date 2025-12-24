@@ -3,7 +3,7 @@
     <nav class="navbar">
       <div class="nav-content">
         <router-link to="/practice" class="logo-link">
-          <h2><span class="logo-icon">PS</span> ProSpeak</h2>
+          <h2><span class="logo-icon">PS</span> ProSpeakAI</h2>
         </router-link>
         <div class="nav-actions">
           <button @click="showMenu = !showMenu" class="menu-btn">☰ Menu</button>
@@ -39,9 +39,9 @@
 
     <div class="support-content">
       <div class="support-card">
-        <h1>💝 Support ProSpeak</h1>
+        <h1>💝 Support ProSpeakAI</h1>
         <p class="support-intro">
-          Thank you for using ProSpeak! Your support helps maintain and improve this platform, 
+          Thank you for using ProSpeakAI! Your support helps maintain and improve this platform, 
           ensuring it remains free and accessible for everyone learning to communicate better.
         </p>
 
@@ -86,11 +86,11 @@
           <p>
             Every contribution, no matter how small, makes a huge difference. 
             Your support helps cover hosting costs, API expenses, and development time, 
-            allowing ProSpeak to grow and serve more learners worldwide.
+            allowing ProSpeakAI to grow and serve more learners worldwide.
           </p>
           <p class="gratitude">
             With heartfelt gratitude,<br>
-            <strong>- The ProSpeak Team</strong>
+            <strong>- The ProSpeakAI Team</strong>
           </p>
         </div>
       </div>

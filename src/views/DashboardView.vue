@@ -3,7 +3,7 @@
     <nav class="navbar">
       <div class="nav-content">
         <router-link to="/practice" class="logo-link">
-          <h2><span class="logo-icon">PS</span> ProSpeak</h2>
+          <h2><span class="logo-icon">PS</span> ProSpeakAI</h2>
         </router-link>
         <div class="nav-actions">
           <button @click="showMenu = !showMenu" class="menu-btn">☰ Menu</button>

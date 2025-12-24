@@ -2,7 +2,7 @@
   <div class="login-container">
     <div class="login-card">
       <div class="logo">
-        <h1><span class="logo-icon">PS</span> ProSpeak</h1>
+        <h1><span class="logo-icon">PS</span> ProSpeakAI</h1>
         <p class="tagline">Master IT Business Communication</p>
       </div>
 

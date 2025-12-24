@@ -2,7 +2,7 @@
   <div class="about-container">
     <nav class="navbar">
       <div class="nav-content">
-        <h2><span class="logo-icon">PS</span> ProSpeak</h2>
+        <h2><span class="logo-icon">PS</span> ProSpeakAI</h2>
         <div class="nav-actions">
           <button @click="showMenu = !showMenu" class="menu-btn">☰ Menu</button>
           <div v-if="showMenu" class="dropdown-menu" @click="showMenu = false">
@@ -33,12 +33,12 @@
 
     <div class="about-content">
       <div class="about-card">
-        <h1>About ProSpeak</h1>
+        <h1>About ProSpeakAI</h1>
         
         <section class="section">
           <h2>🎯 Our Mission</h2>
           <p>
-            ProSpeak is an educational platform designed to help you improve your communication and pronunciation skills 
+            ProSpeakAI is an educational platform designed to help you improve your communication and pronunciation skills 
             through daily practice sessions. Our goal is to make speech practice accessible, engaging, and effective for everyone.
           </p>
         </section>
@@ -111,7 +111,7 @@
         <section class="section">
           <h2>🤖 AI Integration</h2>
           <p>
-            ProSpeak uses Google's Gemini AI to provide intelligent feedback on your speech. To use this feature, 
+            ProSpeakAI uses Google's Gemini AI to provide intelligent feedback on your speech. To use this feature, 
             you can add your own Gemini API key in Settings. Your API key is:
           </p>
           <ul>
@@ -133,7 +133,7 @@
         <section class="section disclaimer">
           <h2>⚠️ Disclaimer</h2>
           <p>
-            This is an educational tool. By using ProSpeak, you acknowledge that:
+            This is an educational tool. By using ProSpeakAI, you acknowledge that:
           </p>
           <ul>
             <li>The application is provided "as is" for learning purposes</li>
