@@ -363,9 +363,9 @@ const toggleAudio = async () => {
     isPlaying.value = true
     error.value = ''
     await speakText(sentence.value.sentence)
+    isPlaying.value = false
   } catch (err) {
-    error.value = 'Failed to play audio'
-  } finally {
+    // Don't show error if user manually stopped playback
     isPlaying.value = false
   }
 }
