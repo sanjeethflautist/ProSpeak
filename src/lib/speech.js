@@ -60,7 +60,7 @@ export class SpeechRecognizer {
     }
 
     this.recognition = new SpeechRecognition()
-    this.recognition.continuous = false // Disable continuous for better mobile support
+    this.recognition.continuous = true // Enable continuous to handle natural pauses
     this.recognition.interimResults = true
     this.recognition.lang = 'en-US'
     this.recognition.maxAlternatives = 1
@@ -72,6 +72,10 @@ export class SpeechRecognizer {
     this.mediaRecorder = null
     this.audioChunks = []
     this.audioBlob = null
+    
+    // Silence detection for natural pauses
+    this.silenceTimer = null
+    this.lastSpeechTime = null
   }
 
   async start() {
@@ -88,7 +92,15 @@ export class SpeechRecognizer {
       
       let hasReceivedSpeech = false
       const MAX_RECORDING_TIME = 30000 // 30 seconds max
+      const SILENCE_THRESHOLD = 6000 // 6 seconds of silence before auto-stop
       let maxTimeTimer = null
+      
+      // Clear any existing silence timer
+      if (this.silenceTimer) {
+        clearTimeout(this.silenceTimer)
+        this.silenceTimer = null
+      }
+      this.lastSpeechTime = Date.now()
 
       // Start audio recording
       try {
@@ -116,6 +128,20 @@ export class SpeechRecognizer {
       this.recognition.onresult = (event) => {
         let interim = ''
         
+        // Reset silence timer on any speech activity
+        this.lastSpeechTime = Date.now()
+        if (this.silenceTimer) {
+          clearTimeout(this.silenceTimer)
+        }
+        
+        // Set new silence timer
+        this.silenceTimer = setTimeout(() => {
+          if (this.isListening && hasReceivedSpeech) {
+            console.log('Extended silence detected, stopping recording...')
+            this.stop()
+          }
+        }, SILENCE_THRESHOLD)
+        
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const transcript = event.results[i][0].transcript
           if (event.results[i].isFinal) {
@@ -136,6 +162,7 @@ export class SpeechRecognizer {
 
       this.recognition.onerror = (event) => {
         if (maxTimeTimer) clearTimeout(maxTimeTimer)
+        if (this.silenceTimer) clearTimeout(this.silenceTimer)
         this.isListening = false
         if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
           this.mediaRecorder.stop()
@@ -158,6 +185,7 @@ export class SpeechRecognizer {
 
       this.recognition.onend = () => {
         if (maxTimeTimer) clearTimeout(maxTimeTimer)
+        if (this.silenceTimer) clearTimeout(this.silenceTimer)
         this.isListening = false
         
         // Stop audio recording
@@ -208,6 +236,10 @@ export class SpeechRecognizer {
   }
 
   stop() {
+    if (this.silenceTimer) {
+      clearTimeout(this.silenceTimer)
+      this.silenceTimer = null
+    }
     if (this.isListening) {
       this.recognition.stop()
       this.isListening = false

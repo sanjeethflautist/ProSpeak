@@ -901,17 +901,17 @@ const deleteAccount = async () => {
 }
 
 .ai-score-card::before {
-  background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
 }
 
 .ai-score-card {
-  background: linear-gradient(135deg, rgba(240, 147, 251, 0.08) 0%, rgba(245, 87, 108, 0.08) 100%);
-  border-color: rgba(240, 147, 251, 0.15);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 50%, rgba(240, 147, 251, 0.12) 100%);
+  border-color: rgba(102, 126, 234, 0.25);
 }
 
 .ai-score-card:hover {
-  border-color: rgba(240, 147, 251, 0.3);
-  box-shadow: 0 12px 32px rgba(240, 147, 251, 0.15);
+  border-color: rgba(102, 126, 234, 0.4);
+  box-shadow: 0 12px 40px rgba(102, 126, 234, 0.25);
 }
 
 .score-label {
@@ -932,24 +932,27 @@ const deleteAccount = async () => {
 }
 
 .score-value.excellent {
-  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  text-shadow: 0 2px 12px rgba(16, 185, 129, 0.3);
 }
 
 .score-value.good {
-  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  text-shadow: 0 2px 12px rgba(251, 191, 36, 0.3);
 }
 
 .score-value.needs-work {
-  background: linear-gradient(135deg, #f44336 0%, #e53935 100%);
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  text-shadow: 0 2px 12px rgba(239, 68, 68, 0.3);
 }
 
 .score-description {
@@ -961,7 +964,8 @@ const deleteAccount = async () => {
 }
 
 .ai-score-card .score-label {
-  color: rgba(255,255,255,0.9);
+  color: #667eea;
+  font-weight: 800;
 }
 
 .score-value {
@@ -993,8 +997,28 @@ const deleteAccount = async () => {
   background-clip: text;
 }
 
-.ai-score-card .score-value {
-  color: white;
+.ai-score-card .score-value.excellent {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: brightness(1.2);
+}
+
+.ai-score-card .score-value.good {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: brightness(1.2);
+}
+
+.ai-score-card .score-value.needs-work {
+  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: brightness(1.2);
 }
 
 .score-description {
@@ -1004,7 +1028,8 @@ const deleteAccount = async () => {
 }
 
 .ai-score-card .score-description {
-  color: rgba(255,255,255,0.8);
+  color: #764ba2;
+  font-weight: 600;
 }
 
 .accuracy-display {
