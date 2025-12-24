@@ -14,6 +14,10 @@
               <TrendingUp :size="18" />
               <span>Dashboard</span>
             </router-link>
+            <router-link to="/support" class="menu-item">
+              <Heart :size="18" />
+              <span>Support</span>
+            </router-link>
             <router-link to="/about" class="menu-item">
               <Info :size="18" />
               <span>About</span>
@@ -242,7 +246,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Mic, TrendingUp, Settings, LogOut, Info, Mail, RefreshCw, Volume2, Square } from 'lucide-vue-next'
+import { Mic, TrendingUp, Settings, LogOut, Info, Mail, Heart, RefreshCw, Volume2, Square } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth'
 import { usePracticeStore } from '../stores/practice'
 import { speakText, stopSpeaking, SpeechRecognizer, calculateAccuracy, analyzeVoiceWithAI } from '../lib/speech'
