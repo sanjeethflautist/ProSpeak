@@ -46,10 +46,15 @@
             @click="toggleRecording" 
             class="control-btn record-btn"
             :class="{ recording: isRecording }"
+            :disabled="analyzingAI"
           >
             <div class="btn-content">
               <Mic :size="20" class="btn-icon-svg" />
-              <span class="btn-text">{{ isRecording ? 'Stop Recording' : 'Start Recording' }}</span>
+              <span class="btn-text">
+                <template v-if="analyzingAI">Analyzing...</template>
+                <template v-else-if="isRecording">Stop Recording</template>
+                <template v-else>Start Recording</template>
+              </span>
             </div>
           </button>
         </div>
@@ -381,23 +386,26 @@ const toggleAudio = async () => {
 const toggleRecording = async () => {
   if (isRecording.value) {
     // User clicked to stop recording manually
+    // Immediately set state to stopped for instant UI feedback
+    isRecording.value = false
     await stopRecording()
     return
   }
   
+  // Immediately set state to recording for instant UI feedback
+  isRecording.value = true
   startRecording()
 }
 
 const startRecording = async () => {
   if (!recognizer) {
     error.value = 'Speech recognition not available'
+    isRecording.value = false
     return
   }
 
-  if (isRecording.value) {
-    console.log('Already recording, ignoring...')
-    return
-  }
+  // Note: isRecording is already set to true in toggleRecording for instant feedback
+  console.log('Starting speech recognition...')
 
   // Stop any ongoing audio playback
   if (isPlaying.value) {
@@ -406,15 +414,12 @@ const startRecording = async () => {
   }
 
   try {
-    isRecording.value = true
     error.value = ''
     userTranscript.value = ''
     accuracyScore.value = 0
     aiScore.value = 0
     aiAnalysis.value = ''
     startTime.value = Date.now()
-
-    console.log('Starting speech recognition...')
     
     // Setup result handler for interim results
     recognizer.onResult = (result) => {
@@ -447,7 +452,6 @@ const stopRecording = async () => {
     
     if (!result || !result.text) {
       error.value = 'No speech detected. Please try again.'
-      isRecording.value = false
       return
     }
     
@@ -500,9 +504,6 @@ const stopRecording = async () => {
   } catch (err) {
     console.error('Stop recording error:', err)
     error.value = err.message || 'Failed to process recording.'
-  } finally {
-    console.log('Setting isRecording to false')
-    isRecording.value = false
   }
 }
 
@@ -920,6 +921,12 @@ const deleteAccount = async () => {
 .control-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  pointer-events: none;
+}
+
+.record-btn:disabled {
+  background: linear-gradient(135deg, #9e9e9e 0%, #757575 100%);
+  box-shadow: 0 4px 15px rgba(158, 158, 158, 0.3);
 }
 
 .results {
