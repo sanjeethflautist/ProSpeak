@@ -1,0 +1,29 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+
+# Environment variables
+.env
+.env.local
+
+# Database migrations and Supabase temp files (contain sensitive credentials)
+supabase/migrations/
+supabase/.temp/
+
+# System files
+.DS_Store
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs/
