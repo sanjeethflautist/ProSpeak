@@ -1,0 +1,26 @@
+{
+  "name": "ullai",
+  "version": "1.0.0",
+  "description": "U'llai - Speak with confidence, powered by AI",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.2.1",
+    "@supabase/supabase-js": "^2.39.3",
+    "axios": "^1.6.5",
+    "chart.js": "^4.4.1",
+    "lucide-vue-next": "^0.562.0",
+    "pinia": "^2.1.7",
+    "vue": "^3.4.15",
+    "vue-chartjs": "^5.3.0",
+    "vue-router": "^4.2.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.3",
+    "vite": "^5.0.12"
+  }
+}
