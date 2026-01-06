@@ -6,6 +6,7 @@ import ResetPasswordView from '../views/ResetPasswordView.vue'
 import PracticeView from '../views/PracticeView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import StatsView from '../views/StatsView.vue'
+import SettingsView from '../views/SettingsView.vue'
 import SupportView from '../views/SupportView.vue'
 import AboutView from '../views/AboutView.vue'
 import ContactView from '../views/ContactView.vue'
@@ -50,6 +51,12 @@ const routes = [
     name: 'Stats',
     component: StatsView,
     meta: { requiresAuth: false }
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: SettingsView,
+    meta: { requiresAuth: true }
   },
   {
     path: '/support',

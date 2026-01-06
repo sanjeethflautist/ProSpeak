@@ -123,104 +123,7 @@
       </div>
     </div>
 
-    <!-- Settings Modal -->
-    <div v-if="showSettings" class="modal-overlay" @click="showSettings = false">
-      <div class="modal-content" @click.stop>
-        <button @click="showSettings = false" class="modal-close-btn" aria-label="Close settings">✕</button>
-        <h2>⚙️ Settings</h2>
-        
-        <div class="settings-section">
-          <h3>🤖 Gemini API Key</h3>
-          <p class="api-key-description">
-            Your Gemini API key enables AI speech analysis and feedback. 
-            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Get a free key here</a>
-          </p>
-          <div class="api-key-input-group">
-            <input 
-              v-model="apiKeyInput" 
-              type="password" 
-              placeholder="Enter your Gemini API key"
-              class="api-key-input"
-            />
-            <button @click="saveApiKey" class="btn-primary" :disabled="savingApiKey">
-              {{ savingApiKey ? 'Saving...' : (hasApiKey ? 'Update' : 'Save') }}
-            </button>
-            <button 
-              v-if="hasApiKey" 
-              @click="deleteApiKey" 
-              class="btn-danger-outline"
-              :disabled="deletingApiKey"
-            >
-              {{ deletingApiKey ? 'Deleting...' : 'Delete' }}
-            </button>
-          </div>
-          <p v-if="hasApiKey" class="api-key-status success">✅ API key saved - AI analysis enabled</p>
-          <p v-else class="api-key-status warning">⚠️ No API key - AI analysis unavailable</p>
-        </div>
 
-        <div class="settings-section">
-          <h3>👤 Account</h3>
-          <button @click="handleLogoutFromSettings" class="btn-secondary" style="width: 100%;">🚪 Logout</button>
-        </div>
-
-        <div class="settings-section">
-          <h3>⚠️ Danger Zone</h3>
-          
-          <div class="danger-action">
-            <div class="danger-info">
-              <h4>🔄 Start Fresh</h4>
-              <p>Delete all your practice data (sessions, scores, progress) but keep your account.</p>
-            </div>
-            <button @click="confirmReset = true" class="btn-danger">Reset Data</button>
-          </div>
-
-          <div class="danger-action">
-            <div class="danger-info">
-              <h4>🗑️ Delete Account</h4>
-              <p>Permanently delete your account and all data. This cannot be undone.</p>
-            </div>
-            <button @click="confirmDelete = true" class="btn-danger">Delete Account</button>
-          </div>
-        </div>
-
-        <button @click="showSettings = false" class="btn-secondary">Close</button>
-      </div>
-    </div>
-
-    <!-- Reset Confirmation Modal -->
-    <div v-if="confirmReset" class="modal-overlay" @click="confirmReset = false">
-      <div class="modal-content confirm-modal" @click.stop>
-        <h2>⚠️ Confirm Reset</h2>
-        <p>Are you sure you want to delete all your practice data? This will remove:</p>
-        <ul>
-          <li>All practice sessions</li>
-          <li>Progress statistics</li>
-          <li>Achievements and scores</li>
-        </ul>
-        <p><strong>Your account will remain active.</strong></p>
-        <div class="modal-actions">
-          <button @click="resetUserData" class="btn-danger" :disabled="resetting">
-            {{ resetting ? 'Resetting...' : 'Yes, Reset My Data' }}
-          </button>
-          <button @click="confirmReset = false" class="btn-secondary">Cancel</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div v-if="confirmDelete" class="modal-overlay" @click="confirmDelete = false">
-      <div class="modal-content confirm-modal" @click.stop>
-        <h2>⚠️ Confirm Account Deletion</h2>
-        <p>Are you sure you want to permanently delete your account?</p>
-        <p><strong>This action cannot be undone!</strong></p>
-        <div class="modal-actions">
-          <button @click="deleteAccount" class="btn-danger" :disabled="deleting">
-            {{ deleting ? 'Deleting...' : 'Yes, Delete My Account' }}
-          </button>
-          <button @click="confirmDelete = false" class="btn-secondary">Cancel</button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -248,16 +151,6 @@ const aiScore = ref(0)
 const aiAnalysis = ref('')
 const analyzingAI = ref(false)
 const startTime = ref(null)
-const showSettings = ref(false)
-const confirmReset = ref(false)
-const confirmDelete = ref(false)
-const resetting = ref(false)
-const deleting = ref(false)
-
-// Gemini API Key (used for AI analysis)
-const apiKeyInput = ref('')
-const savingApiKey = ref(false)
-const deletingApiKey = ref(false)
 const hasApiKey = ref(false)
 
 const recordedAudioBlob = ref(null)
@@ -273,13 +166,7 @@ const handleContainerClick = () => {
 
 const handleEscKey = (e) => {
   if (e.key === 'Escape') {
-    if (confirmDelete.value) {
-      confirmDelete.value = false
-    } else if (confirmReset.value) {
-      confirmReset.value = false
-    } else if (showSettings.value) {
-      showSettings.value = false
-    }
+    // Escape key handling for future modals
   }
 }
 
@@ -548,89 +435,11 @@ const togglePlayRecording = () => {
   isPlayingRecording.value = true
 }
 
-const goToSettings = async () => {
-  showSettings.value = true
-  // Load current API key status when opening settings
-  apiKeyInput.value = ''
-  hasApiKey.value = await authStore.hasGeminiApiKey()
+const goToSettings = () => {
+  router.push('/settings')
 }
 
-const saveApiKey = async () => {
-  if (!apiKeyInput.value.trim()) {
-    alert('Please enter an API key')
-    return
-  }
-  
-  try {
-    savingApiKey.value = true
-    await authStore.saveGeminiApiKey(apiKeyInput.value.trim())
-    hasApiKey.value = true
-    alert('✅ Gemini API key saved! AI analysis enabled.')
-    apiKeyInput.value = ''
-  } catch (error) {
-    console.error('Save API key error:', error)
-    alert('❌ Failed to save API key: ' + error.message)
-  } finally {
-    savingApiKey.value = false
-  }
-}
 
-const deleteApiKey = async () => {
-  if (!confirm('Are you sure you want to delete your API key? You will lose AI analysis features.')) {
-    return
-  }
-  
-  try {
-    deletingApiKey.value = true
-    await authStore.deleteGeminiApiKey()
-    hasApiKey.value = false
-    apiKeyInput.value = ''
-    alert('✅ API key deleted.')
-  } catch (error) {
-    console.error('Delete API key error:', error)
-    alert('❌ Failed to delete API key: ' + error.message)
-  } finally {
-    deletingApiKey.value = false
-  }
-}
-
-const handleLogout = async () => {
-  await authStore.signOut()
-  router.push('/login')
-}
-
-const handleLogoutFromSettings = async () => {
-  await authStore.signOut()
-  router.push('/login')
-}
-
-const resetUserData = async () => {
-  try {
-    resetting.value = true
-    await practiceStore.resetUserData()
-    confirmReset.value = false
-    showSettings.value = false
-    alert('✅ Your data has been reset successfully!')
-  } catch (error) {
-    console.error('Reset error:', error)
-    alert('❌ Failed to reset data: ' + error.message)
-  } finally {
-    resetting.value = false
-  }
-}
-
-const deleteAccount = async () => {
-  try {
-    deleting.value = true
-    await authStore.deleteAccount()
-    confirmDelete.value = false
-    router.push('/login')
-  } catch (error) {
-    console.error('Delete account error:', error)
-    alert('❌ Failed to delete account: ' + error.message)
-    deleting.value = false
-  }
-}
 </script>
 
 <style scoped>

@@ -75,6 +75,15 @@ Available voices:
 - `en-US-Neural2-D` - American Male
 - `en-US-Neural2-F` - American Female
 
+## ⚠️ Billing Responsibility
+
+**IMPORTANT: You are responsible for your own Google Cloud and Gemini API subscriptions and any associated costs.**
+
+- U'llai is **NOT responsible** for any charges from Google Cloud or Gemini API
+- U'llai securely transmits your data to Google services using your personal API keys
+- All billing is between you and Google
+- Monitor your usage and set up billing alerts in your Google Cloud Console
+
 ## Cost Information
 
 Google Cloud TTS pricing (as of 2024):
@@ -86,6 +95,8 @@ For typical usage (practicing 10-20 sentences per day):
 - Daily usage: ~500-2000 characters
 - Monthly: ~15,000-60,000 characters
 - **Cost**: FREE (well within free tier)
+
+**Recommendation:** Set up billing alerts in Google Cloud Console to avoid unexpected charges.
 
 ## Troubleshooting
 
