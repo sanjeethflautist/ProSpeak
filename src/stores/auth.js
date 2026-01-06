@@ -101,8 +101,35 @@ export const useAuthStore = defineStore('auth', {
 
       if (error) throw error
 
-      // Note: user_progress will be auto-created by database trigger
-      // No need to manually insert here as RLS policies would block it
+      // Fallback: Create profile if trigger doesn't fire
+      // This ensures profile creation even if database trigger fails
+      if (data.user) {
+        try {
+          // Wait a moment for trigger to complete
+          await new Promise(resolve => setTimeout(resolve, 500))
+          
+          // Check if profile was created by trigger
+          const { data: existingProfile } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('user_id', data.user.id)
+            .single()
+          
+          // If no profile exists, create it via RPC (bypasses RLS)
+          if (!existingProfile) {
+            console.log('Trigger did not create profile, creating manually...')
+            const { error: rpcError } = await supabase.rpc('create_user_profile_manual', {
+              p_user_id: data.user.id
+            })
+            if (rpcError) {
+              console.error('Failed to create profile manually:', rpcError)
+            }
+          }
+        } catch (err) {
+          // Don't block signup if profile creation fails
+          console.error('Profile creation check failed:', err)
+        }
+      }
       
       return data
     },

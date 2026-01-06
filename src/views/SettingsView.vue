@@ -441,7 +441,7 @@ const deleteApiKey = async () => {
 
 const handleLogout = async () => {
   try {
-    await authStore.logout()
+    await authStore.signOut()
     router.push('/login')
   } catch (error) {
     console.error('Logout error:', error)
@@ -501,7 +501,7 @@ const deleteAccount = async () => {
 
     if (error) throw error
 
-    await authStore.logout()
+    await authStore.signOut()
     alert('✅ Your account has been deleted')
     router.push('/login')
   } catch (error) {

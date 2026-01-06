@@ -2,49 +2,39 @@
 
 ## Error: "Database error saving new user"
 
-This error occurs during signup when the database tables are not properly configured.
+This error occurs during signup when the database tables are not properly configured or when Row Level Security (RLS) policies block automatic record creation.
 
-### Root Cause
-The `user_profiles` table or trigger is missing. This table is created by the leaderboard migration and is required for new user signups.
+### Root Causes
+1. **RLS Policy Conflict**: The trigger function tried to insert into `user_progress` table, but RLS policies blocked it because there's no authenticated user context during the trigger execution.
+2. **Multiple Triggers Conflict**: Having two separate triggers (`on_auth_user_created` and `on_auth_user_created_progress`) on the same table can cause race conditions or failures.
+3. **Missing Tables**: The `user_profiles` or `user_progress` tables might not exist.
+
+### The Fix
+The updated migration (`20260106000200_auto_create_user_progress.sql`) now:
+- Combines both user profile and user progress creation into a single trigger function
+- Uses `SECURITY DEFINER` to bypass RLS policies during automatic record creation
+- Uses `ON CONFLICT DO NOTHING` to handle duplicate insertions gracefully
+- Includes proper error handling that doesn't block user signup even if something fails
 
 ### Quick Fix
 
-**Option 1: Apply Migration via Supabase CLI** (Recommended)
+**Apply the Updated Migration:**
+
+1. **Via Supabase CLI** (Recommended):
 ```bash
 cd /Users/snayak/Desktop/projects/communication
 supabase db push
 ```
 
-**Option 2: Run SQL Manually**
-
-1. Go to Supabase Dashboard → SQL Editor
-2. Run this diagnostic query first:
-
-```sql
--- Check what's missing
-SELECT EXISTS (
-  SELECT FROM information_schema.tables 
-  WHERE table_schema = 'public' 
-  AND table_name = 'user_profiles'
-) AS user_profiles_exists;
-
-SELECT EXISTS (
-  SELECT FROM pg_trigger 
-  WHERE tgname = 'on_auth_user_created'
-) AS trigger_exists;
-```
-
-3. If `user_profiles_exists` is FALSE, apply the main migration:
-   - Copy contents of `supabase/migrations/20260106000000_add_user_profiles.sql`
+2. **Via Supabase Dashboard** (If CLI doesn't work):
+   - Go to Supabase Dashboard → SQL Editor
+   - Copy the entire contents of `supabase/migrations/20260106000200_auto_create_user_progress.sql`
    - Paste and run in SQL Editor
-
-4. If you want privacy controls, also apply:
-   - Copy contents of `supabase/migrations/20260106000100_add_leaderboard_privacy.sql`
-   - Paste and run in SQL Editor
+   - This will update the trigger function to properly handle both user profiles and progress
 
 ### Verify Fix
 
-Run this query to confirm:
+Run this query in Supabase SQL Editor to confirm the fix:
 
 ```sql
 SELECT 
@@ -53,21 +43,49 @@ SELECT
   (SELECT COUNT(*) FROM user_progress) AS total_progress;
 ```
 
-All three counts should match (or profiles/progress should be less than or equal to users).
+```sql
+-- Verify the trigger function exists and includes both profile and progress creation
+SELECT 
+  p.proname as function_name,
+  pg_get_functiondef(p.oid) as definition
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE p.proname = 'auto_create_user_profile';
+
+-- Check that only ONE trigger exists on auth.users
+SELECT tgname, tgtype, tgenabled
+FROM pg_trigger
+WHERE tgrelid = 'auth.users'::regclass;
+
+-- Verify tables exist
+SELECT tablename 
+FROM pg_tables 
+WHERE schemaname = 'public' 
+AND tablename IN ('user_profiles', 'user_progress');
+```
+
+Expected results:
+- `auto_create_user_profile` function should contain INSERT statements for both `user_profiles` AND `user_progress`
+- Only ONE trigger named `on_auth_user_created` should exist
+- Both `user_profiles` and `user_progress` tables should be listed
 
 ### Test Signup
 
-1. Try creating a new account
-2. Check that the user profile was auto-created:
+1. Try creating a new account through the app
+2. Check that both records were auto-created:
 
 ```sql
-SELECT * FROM user_profiles ORDER BY created_at DESC LIMIT 5;
+-- Check the most recent user profiles
+SELECT up.username, up.avatar_url, up.created_at, pr.total_sessions
+FROM user_profiles up
+JOIN user_progress pr ON up.user_id = pr.user_id
+ORDER BY up.created_at DESC LIMIT 5;
 ```
 
 You should see:
 - Auto-generated username (e.g., "SwiftSpeaker2043")
-- Random avatar_url (e.g., "avatar3.svg")
-- show_in_leaderboard = true
+- Random avatar_url (e.g., "avatar3.svg")  
+- User progress with 0 sessions (for new user)
 
 ### If Still Failing
 
@@ -81,20 +99,32 @@ Check the browser console for detailed error messages:
    - `trigger`
    - RLS policies
 
-Common issues:
+Common PostgreSQL error codes:
 - **42P01**: Table doesn't exist → Apply migration
-- **23503**: Foreign key violation → user_id not found
-- **42P09**: Permission denied → Check RLS policies
+- **23503**: Foreign key violation → Check auth.users
+- **42501**: Permission denied → RLS policy blocking (fixed by SECURITY DEFINER)
+- **23505**: Unique violation → User already exists (handled gracefully)
 
-### Prevention
+### What Changed
 
-Always apply migrations before:
-- Deploying to production
-- Testing new features
-- Allowing new signups
+**Before**: Two separate triggers attempted to fire on the same event:
+```sql
+-- Old approach (BROKEN)
+CREATE TRIGGER on_auth_user_created ...         -- Creates user_profiles
+CREATE TRIGGER on_auth_user_created_progress ... -- Creates user_progress
+```
+
+**After**: Single trigger creates both records:
+```sql
+-- New approach (FIXED)
+CREATE TRIGGER on_auth_user_created ...
+  EXECUTE FUNCTION auto_create_user_profile();  -- Creates BOTH
+```
+
+The function uses `SECURITY DEFINER` to bypass RLS policies and `ON CONFLICT DO NOTHING` to handle race conditions.
 
 ### Related Files
-- Migration: `supabase/migrations/20260106000000_add_user_profiles.sql`
-- Privacy: `supabase/migrations/20260106000100_add_leaderboard_privacy.sql`
-- Diagnostic: `check-migrations.sql`
-- Error handling: `src/stores/auth.js` (signUp function)
+- **Fixed Migration**: `supabase/migrations/20260106000200_auto_create_user_progress.sql`
+- **Profile Setup**: `supabase/migrations/20260106000000_add_user_profiles.sql`
+- **Privacy Controls**: `supabase/migrations/20260106000100_add_leaderboard_privacy.sql`
+- **App Signup Logic**: `src/stores/auth.js` (signUp function)
