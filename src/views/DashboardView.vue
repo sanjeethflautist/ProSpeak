@@ -115,105 +115,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Settings Modal -->
-    <div v-if="showSettings" class="modal-overlay" @click="showSettings = false">
-      <div class="modal-content" @click.stop>
-        <button @click="showSettings = false" class="modal-close-btn" aria-label="Close settings">✕</button>
-        <h2>⚙️ Settings</h2>
-        
-        <div class="settings-section">
-          <h3>🤖 Gemini API Key</h3>
-          <p class="api-key-description">
-            Add your own Gemini API key for AI-powered speech analysis. 
-            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Get a free key here</a>
-          </p>
-          <div class="api-key-input-group">
-            <input 
-              v-model="apiKeyInput" 
-              type="password" 
-              placeholder="Enter your Gemini API key"
-              class="api-key-input"
-            />
-            <button @click="saveApiKey" class="btn-primary" :disabled="savingApiKey">
-              {{ savingApiKey ? 'Saving...' : (hasApiKey ? 'Update' : 'Save') }}
-            </button>
-            <button 
-              v-if="hasApiKey" 
-              @click="deleteApiKey" 
-              class="btn-danger-outline"
-              :disabled="deletingApiKey"
-            >
-              {{ deletingApiKey ? 'Deleting...' : 'Delete' }}
-            </button>
-          </div>
-          <p v-if="hasApiKey" class="api-key-status success">✅ API key saved</p>
-          <p v-else class="api-key-status warning">⚠️ No API key saved - using default (may have rate limits)</p>
-        </div>
-        
-        <div class="settings-section">
-          <h3>👤 Account</h3>
-          <button @click="handleLogoutFromSettings" class="btn-secondary" style="width: 100%;">🚪 Logout</button>
-        </div>
-
-        <div class="settings-section">
-          <h3>⚠️ Danger Zone</h3>
-          
-          <div class="danger-action">
-            <div class="danger-info">
-              <h4>🔄 Start Fresh</h4>
-              <p>Delete all your practice data (sessions, scores, progress) but keep your account.</p>
-            </div>
-            <button @click="confirmReset = true" class="btn-danger">Reset Data</button>
-          </div>
-
-          <div class="danger-action">
-            <div class="danger-info">
-              <h4>🗑️ Delete Account</h4>
-              <p>Permanently delete your account and all data. This cannot be undone.</p>
-            </div>
-            <button @click="confirmDelete = true" class="btn-danger">Delete Account</button>
-          </div>
-        </div>
-
-        <button @click="showSettings = false" class="btn-secondary">Close</button>
-      </div>
-    </div>
-
-    <!-- Reset Confirmation Modal -->
-    <div v-if="confirmReset" class="modal-overlay" @click="confirmReset = false">
-      <div class="modal-content confirm-modal" @click.stop>
-        <h2>⚠️ Confirm Reset</h2>
-        <p>Are you sure you want to delete all your practice data? This will remove:</p>
-        <ul>
-          <li>All practice sessions</li>
-          <li>Progress statistics</li>
-          <li>Achievements and scores</li>
-        </ul>
-        <p><strong>Your account will remain active.</strong></p>
-        <div class="modal-actions">
-          <button @click="resetUserData" class="btn-danger" :disabled="resetting">
-            {{ resetting ? 'Resetting...' : 'Yes, Reset My Data' }}
-          </button>
-          <button @click="confirmReset = false" class="btn-secondary">Cancel</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div v-if="confirmDelete" class="modal-overlay" @click="confirmDelete = false">
-      <div class="modal-content confirm-modal" @click.stop>
-        <h2>⚠️ Confirm Account Deletion</h2>
-        <p>Are you sure you want to permanently delete your account?</p>
-        <p><strong>This action cannot be undone!</strong></p>
-        <div class="modal-actions">
-          <button @click="deleteAccount" class="btn-danger" :disabled="deleting">
-            {{ deleting ? 'Deleting...' : 'Yes, Delete My Account' }}
-          </button>
-          <button @click="confirmDelete = false" class="btn-secondary">Cancel</button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -238,15 +139,6 @@ const progress = ref(null)
 const sessions = ref([])
 const accuracyChartCanvas = ref(null)
 const frequencyChartCanvas = ref(null)
-const showSettings = ref(false)
-const confirmReset = ref(false)
-const confirmDelete = ref(false)
-const resetting = ref(false)
-const deleting = ref(false)
-const apiKeyInput = ref('')
-const savingApiKey = ref(false)
-const deletingApiKey = ref(false)
-const hasApiKey = ref(false)
 
 let accuracyChart = null
 let frequencyChart = null
@@ -257,22 +149,12 @@ const handleContainerClick = () => {
 
 const handleEscKey = (e) => {
   if (e.key === 'Escape') {
-    if (confirmDelete.value) {
-      confirmDelete.value = false
-    } else if (confirmReset.value) {
-      confirmReset.value = false
-    } else if (showSettings.value) {
-      showSettings.value = false
-    }
+    // Escape key handling for future modals
   }
 }
 
 const goToSettings = () => {
-  showSettings.value = true
-}
-
-const handleOpenSettingsEvent = () => {
-  showSettings.value = true
+  router.push('/settings')
 }
 
 // Computed property to calculate average AI score from sessions
@@ -286,7 +168,6 @@ const averageAIScore = computed(() => {
 
 onMounted(async () => {
   window.addEventListener('keydown', handleEscKey)
-  window.addEventListener('open-settings', handleOpenSettingsEvent)
   
   try {
     // Fetch data
@@ -433,7 +314,6 @@ const loadDashboard = async () => {
   try {
     progress.value = await practiceStore.fetchUserProgress()
     sessions.value = await practiceStore.fetchRecentSessions(10)
-    hasApiKey.value = await authStore.hasGeminiApiKey()
   } catch (error) {
     console.error('Error loading dashboard:', error)
   } finally {
@@ -442,7 +322,6 @@ const loadDashboard = async () => {
 }
 
 onUnmounted(() => {
-  window.removeEventListener('open-settings', handleOpenSettingsEvent)
   window.removeEventListener('keydown', handleEscKey)
 })
 
@@ -493,105 +372,7 @@ const deleteSession = async (sessionId) => {
   }
 }
 
-const handleLogoutFromSettings = async () => {
-  showSettings.value = false
-  await handleLogout()
-}
 
-const saveApiKey = async () => {
-  if (!apiKeyInput.value.trim()) {
-    alert('Please enter an API key')
-    return
-  }
-  
-  try {
-    savingApiKey.value = true
-    await authStore.saveGeminiApiKey(apiKeyInput.value.trim())
-    hasApiKey.value = true
-    alert('✅ API key saved successfully!')
-    apiKeyInput.value = ''
-  } catch (error) {
-    console.error('Save API key error:', error)
-    alert('❌ Failed to save API key: ' + error.message)
-  } finally {
-    savingApiKey.value = false
-  }
-}
-
-const deleteApiKey = async () => {
-  if (!confirm('Are you sure you want to delete your API key?')) {
-    return
-  }
-  
-  try {
-    deletingApiKey.value = true
-    await authStore.deleteGeminiApiKey()
-    hasApiKey.value = false
-    apiKeyInput.value = ''
-    alert('✅ API key deleted successfully!')
-  } catch (error) {
-    console.error('Delete API key error:', error)
-    alert('❌ Failed to delete API key: ' + error.message)
-  } finally {
-    deletingApiKey.value = false
-  }
-}
-
-const resetUserData = async () => {
-  try {
-    resetting.value = true
-    
-    // Clear local state first
-    sessions.value = []
-    progress.value = null
-    
-    // Destroy charts before clearing data
-    if (accuracyChart) {
-      accuracyChart.destroy()
-      accuracyChart = null
-    }
-    if (frequencyChart) {
-      frequencyChart.destroy()
-      frequencyChart = null
-    }
-    
-    // Reset data in database
-    await practiceStore.resetUserData()
-    
-    // Fetch fresh data from database (should be empty/reset)
-    progress.value = await practiceStore.fetchUserProgress()
-    sessions.value = await practiceStore.fetchRecentSessions(10)
-    
-    // Only recreate charts if there are sessions
-    if (sessions.value.length > 0) {
-      createAccuracyChart()
-      createFrequencyChart()
-    }
-    
-    confirmReset.value = false
-    showSettings.value = false
-    
-    alert('✅ Your data has been reset successfully!')
-  } catch (error) {
-    console.error('Reset error:', error)
-    alert('❌ Failed to reset data: ' + error.message)
-  } finally {
-    resetting.value = false
-  }
-}
-
-const deleteAccount = async () => {
-  try {
-    deleting.value = true
-    await authStore.deleteAccount()
-    confirmDelete.value = false
-    router.push('/login')
-  } catch (error) {
-    console.error('Delete account error:', error)
-    alert('❌ Failed to delete account: ' + error.message)
-    deleting.value = false
-  }
-}
 </script>
 
 <style scoped>
@@ -1017,6 +798,22 @@ const deleteAccount = async () => {
 
 .api-key-description a:hover {
   text-decoration: underline;
+}
+
+.billing-disclaimer {
+  background-color: #fff3cd;
+  border-left: 4px solid #ffc107;
+  padding: 12px 15px;
+  margin-bottom: 15px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #856404;
+  line-height: 1.5;
+}
+
+.billing-disclaimer strong {
+  color: #856404;
+  font-weight: 700;
 }
 
 .api-key-input-group {

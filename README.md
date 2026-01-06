@@ -8,6 +8,23 @@ The name is a bridge between two worlds. In Konkani, **Ullai** means "to speak."
 
 We built this for the global professional who has the knowledge but needs the confidence to speak it.
 
+## ⚠️ Important: Gemini API Usage & Billing
+
+**YOU ARE RESPONSIBLE FOR YOUR OWN GEMINI API KEY AND ANY ASSOCIATED COSTS.**
+
+- U'llai requires you to provide your own Google Gemini API key
+- U'llai is **NOT responsible** for any charges incurred from Gemini API usage
+- U'llai securely transmits your voice data to Gemini using your personal API key
+- All API usage and billing is between you and Google
+- Monitor your usage and set billing alerts in your Google Cloud Console
+- Get your free API key: https://aistudio.google.com/app/apikey
+
+**How U'llai Uses Your Key:**
+- Your API key is encrypted and stored securely in your user profile
+- U'llai only sends your voice recordings to Gemini for analysis
+- No data is shared with third parties
+- You maintain full control and can delete your key at any time
+
 ## About
 
 Improve your IT business communication skills with AI-powered daily practice sessions using voice recognition and feedback.
