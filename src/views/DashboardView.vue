@@ -154,7 +154,7 @@ const handleEscKey = (e) => {
 }
 
 const goToSettings = () => {
-  router.push('/settings')
+  router.push({ path: '/settings', query: { scrollTo: 'api-key' } })
 }
 
 // Computed property to calculate average AI score from sessions

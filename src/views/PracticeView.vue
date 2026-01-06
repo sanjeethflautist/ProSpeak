@@ -436,7 +436,7 @@ const togglePlayRecording = () => {
 }
 
 const goToSettings = () => {
-  router.push('/settings')
+  router.push({ path: '/settings', query: { scrollTo: 'api-key' } })
 }
 
 

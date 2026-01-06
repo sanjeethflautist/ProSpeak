@@ -6,6 +6,68 @@
       <h1 class="page-title">⚙️ Settings</h1>
       
       <div class="settings-section">
+        <h2>👤 Profile</h2>
+        <div class="profile-section">
+          <div class="current-avatar-display">
+            <img 
+              :src="`/${currentProfile?.avatar_url || 'avatar1.svg'}`" 
+              :alt="currentProfile?.username"
+              class="current-avatar-image"
+              @error="handleImageError"
+            />
+            <div class="current-username">{{ currentProfile?.username || 'Loading...' }}</div>
+          </div>
+
+          <div class="profile-field">
+            <label for="username">Username</label>
+            <div class="username-input-group">
+              <input 
+                v-model="usernameInput" 
+                type="text" 
+                id="username"
+                placeholder="Enter new username"
+                class="profile-input"
+                maxlength="30"
+              />
+              <button @click="updateUsername" class="btn-primary" :disabled="savingProfile || !usernameInput.trim()">
+                {{ savingProfile ? 'Saving...' : 'Update' }}
+              </button>
+            </div>
+            <p class="field-hint">Choose a unique username (3-30 characters)</p>
+          </div>
+
+          <div class="profile-field">
+            <label>Profile Picture</label>
+            <div class="avatar-grid">
+              <div 
+                v-for="avatar in avatarOptions" 
+                :key="avatar"
+                @click="selectAvatar(avatar)"
+                :class="['avatar-option', { 
+                  selected: selectedAvatar === avatar || (!selectedAvatar && currentProfile?.avatar_url === avatar)
+                }]"
+              >
+                <img 
+                  :src="`/${avatar}`" 
+                  :alt="avatar"
+                  @error="handleImageError"
+                />
+              </div>
+            </div>
+            <button 
+              v-if="selectedAvatar" 
+              @click="updateAvatar" 
+              class="btn-primary" 
+              :disabled="savingProfile"
+              style="margin-top: 1rem; width: 100%;"
+            >
+              {{ savingProfile ? 'Saving...' : 'Save Avatar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section" ref="apiKeySection">
         <h2>🤖 Gemini API Key</h2>
         <p class="api-key-description">
           Add your own Gemini API key for AI-powered speech analysis. 
@@ -106,13 +168,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import Navbar from '../components/Navbar.vue'
 import { useAuthStore } from '../stores/auth'
 import { supabase } from '../lib/supabase'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const apiKeyInput = ref('')
@@ -123,6 +186,19 @@ const confirmReset = ref(false)
 const confirmDelete = ref(false)
 const resetting = ref(false)
 const deleting = ref(false)
+
+// Profile management
+const currentProfile = ref(null)
+const usernameInput = ref('')
+const selectedAvatar = ref(null)
+const savingProfile = ref(false)
+const apiKeySection = ref(null)
+
+const avatarOptions = [
+  'avatar1.svg', 'avatar2.svg', 'avatar3.svg', 'avatar4.svg',
+  'avatar5.svg', 'avatar6.svg', 'avatar7.svg', 'avatar8.svg',
+  'avatar9.svg', 'avatar10.svg', 'avatar11.svg', 'avatar12.svg'
+]
 
 const handleEscKey = (e) => {
   if (e.key === 'Escape') {
@@ -137,7 +213,127 @@ const handleEscKey = (e) => {
 onMounted(async () => {
   window.addEventListener('keydown', handleEscKey)
   hasApiKey.value = await authStore.hasGeminiApiKey()
+  await loadUserProfile()
+  
+  // Check if we should scroll to API key section
+  if (route.query.scrollTo === 'api-key') {
+    await nextTick()
+    scrollToApiKey()
+  }
 })
+
+const scrollToApiKey = () => {
+  if (apiKeySection.value) {
+    apiKeySection.value.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // Add a slight delay and highlight effect
+    setTimeout(() => {
+      apiKeySection.value.style.animation = 'highlight 1.5s ease'
+    }, 500)
+  }
+}
+
+// Watch for route changes in case user navigates to settings with query param
+watch(() => route.query.scrollTo, (newValue) => {
+  if (newValue === 'api-key') {
+    nextTick(() => {
+      scrollToApiKey()
+    })
+  }
+})
+
+const loadUserProfile = async () => {
+  try {
+    if (!authStore.user) return
+
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', authStore.user.id)
+      .single()
+
+    if (error) {
+      console.error('Error loading profile:', error)
+      return
+    }
+
+    currentProfile.value = data
+  } catch (error) {
+    console.error('Load profile error:', error)
+  }
+}
+
+const updateUsername = async () => {
+  const newUsername = usernameInput.value.trim()
+  
+  if (!newUsername) {
+    alert('Please enter a username')
+    return
+  }
+
+  if (newUsername.length < 3 || newUsername.length > 30) {
+    alert('Username must be between 3 and 30 characters')
+    return
+  }
+
+  try {
+    savingProfile.value = true
+
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ username: newUsername, updated_at: new Date().toISOString() })
+      .eq('user_id', authStore.user.id)
+
+    if (error) {
+      if (error.code === '23505') { // Unique constraint violation
+        alert('❌ This username is already taken. Please choose another.')
+      } else {
+        throw error
+      }
+      return
+    }
+
+    currentProfile.value.username = newUsername
+    usernameInput.value = ''
+    alert('✅ Username updated successfully!')
+  } catch (error) {
+    console.error('Update username error:', error)
+    alert('❌ Failed to update username: ' + error.message)
+  } finally {
+    savingProfile.value = false
+  }
+}
+
+const selectAvatar = (avatar) => {
+  selectedAvatar.value = avatar
+}
+
+const updateAvatar = async () => {
+  if (!selectedAvatar.value) return
+
+  try {
+    savingProfile.value = true
+
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ avatar_url: selectedAvatar.value, updated_at: new Date().toISOString() })
+      .eq('user_id', authStore.user.id)
+
+    if (error) throw error
+
+    currentProfile.value.avatar_url = selectedAvatar.value
+    selectedAvatar.value = null
+    alert('✅ Avatar updated successfully!')
+  } catch (error) {
+    console.error('Update avatar error:', error)
+    alert('❌ Failed to update avatar: ' + error.message)
+  } finally {
+    savingProfile.value = false
+  }
+}
+
+const handleImageError = (e) => {
+  e.target.src = '/avatar1.svg'
+}
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleEscKey)
@@ -293,6 +489,140 @@ const deleteAccount = async () => {
   margin-bottom: 16px;
   padding-bottom: 12px;
   border-bottom: 2px solid #f0f0f0;
+}
+
+.settings-section h3 {
+  color: #333;
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+
+/* Profile Section */
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.current-avatar-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+}
+
+.current-avatar-image {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 4px solid white;
+  object-fit: cover;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.current-username {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.profile-field label {
+  font-weight: 600;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.username-input-group {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.profile-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.profile-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.field-hint {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0;
+}
+
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.avatar-option {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.avatar-option:hover {
+  transform: scale(1.1);
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.avatar-option.selected {
+  border-color: #667eea;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.5);
+  transform: scale(1.05);
+}
+
+.avatar-option img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* API Key Section */
+.api-key-description {
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.api-key-description a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.api-key-description a:hover {
+  text-decoration: underline;
 }
 
 .settings-section h3 {
@@ -543,8 +873,20 @@ button:disabled {
     flex-direction: column;
   }
 
-  .api-key-input {
+  .api-key-input,
+  .username-input-group {
     width: 100%;
+    flex-direction: column;
+  }
+
+  .avatar-grid {
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .avatar-option {
+    width: 60px;
+    height: 60px;
   }
 
   .danger-action {
@@ -565,6 +907,20 @@ button:disabled {
 
   .modal-actions {
     flex-direction: column;
+  }
+}
+
+@keyframes highlight {
+  0% {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(102, 126, 234, 0.6), 0 10px 40px rgba(0, 0, 0, 0.2);
+    transform: scale(1.02);
+  }
+  100% {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    transform: scale(1);
   }
 }
 </style>

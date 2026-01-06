@@ -9,6 +9,20 @@
           <h2><img src="/ullai-logo.png" alt="U'llai" class="logo-image" /> U'llai</h2>
         </router-link>
         <div class="nav-actions">
+          <!-- User Profile Display -->
+          <router-link 
+            v-if="authStore.isAuthenticated && userProfile" 
+            to="/settings"
+            class="user-profile"
+          >
+            <img 
+              :src="`/${userProfile.avatar_url || 'avatar1.svg'}`" 
+              :alt="userProfile.username"
+              class="user-avatar"
+              @error="handleImageError"
+            />
+            <span class="username">{{ userProfile.username }}</span>
+          </router-link>
           <button @click.stop="showMenu = !showMenu" class="menu-btn">☰</button>
           <div v-if="showMenu" class="dropdown-menu" @click.stop>
             <!-- Authenticated menu -->
@@ -20,6 +34,10 @@
               <router-link to="/dashboard" class="menu-item" @click="showMenu = false">
                 <TrendingUp :size="18" />
                 <span>Dashboard</span>
+              </router-link>
+              <router-link to="/leaderboard" class="menu-item" @click="showMenu = false">
+                <Trophy :size="18" />
+                <span>Leaderboard</span>
               </router-link>
               <button @click="handleSettingsClick" class="menu-item">
                 <Settings :size="18" />
@@ -74,10 +92,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Mic, TrendingUp, Settings, LogOut, Info, Mail, Heart, BarChart } from 'lucide-vue-next'
+import { Mic, TrendingUp, Settings, LogOut, Info, Mail, Heart, BarChart, Trophy } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth'
+import { supabase } from '../lib/supabase'
 
 const props = defineProps({
   hasLocalSettings: {
@@ -91,6 +110,35 @@ const emit = defineEmits(['open-settings'])
 const router = useRouter()
 const authStore = useAuthStore()
 const showMenu = ref(false)
+const userProfile = ref(null)
+
+const fetchUserProfile = async () => {
+  if (!authStore.user) {
+    userProfile.value = null
+    return
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('username, avatar_url')
+      .eq('user_id', authStore.user.id)
+      .single()
+
+    if (error) {
+      console.error('Error fetching user profile:', error)
+      return
+    }
+
+    userProfile.value = data
+  } catch (err) {
+    console.error('Failed to fetch user profile:', err)
+  }
+}
+
+const handleImageError = (e) => {
+  e.target.src = '/avatar1.svg'
+}
 
 const handleEscKey = (e) => {
   if (e.key === 'Escape' && showMenu.value) {
@@ -100,18 +148,7 @@ const handleEscKey = (e) => {
 
 const handleSettingsClick = () => {
   showMenu.value = false
-  
-  if (props.hasLocalSettings) {
-    // Emit event for pages with their own settings modal (Practice, Dashboard)
-    emit('open-settings')
-  } else {
-    // Navigate to dashboard for pages without settings modal
-    router.push('/dashboard').then(() => {
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('open-settings'))
-      }, 300)
-    })
-  }
+  router.push('/settings')
 }
 
 const handleLogout = async () => {
@@ -121,10 +158,16 @@ const handleLogout = async () => {
 
 onMounted(() => {
   window.addEventListener('keydown', handleEscKey)
+  fetchUserProfile()
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleEscKey)
+})
+
+// Watch for authentication changes
+watch(() => authStore.user, () => {
+  fetchUserProfile()
 })
 </script>
 
@@ -190,6 +233,42 @@ onUnmounted(() => {
   gap: 15px;
   align-items: center;
   position: relative;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 20px;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.user-profile:hover {
+  background: rgba(102, 126, 234, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #667eea;
+  object-fit: cover;
+}
+
+.username {
+  font-weight: 600;
+  color: #667eea;
+  font-size: 0.95rem;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .menu-btn {
@@ -284,6 +363,21 @@ onUnmounted(() => {
     padding: 0 12px;
   }
 
+  .user-profile {
+    gap: 6px;
+    padding: 4px 8px;
+  }
+
+  .user-avatar {
+    width: 28px;
+    height: 28px;
+  }
+
+  .username {
+    font-size: 0.85rem;
+    max-width: 80px;
+  }
+
   .menu-btn {
     padding: 8px 16px;
     font-size: 0.9rem;
@@ -300,6 +394,16 @@ onUnmounted(() => {
 
   .menu-item:hover {
     padding-left: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .username {
+    display: none;
+  }
+
+  .user-profile {
+    padding: 4px;
   }
 }
 </style>
