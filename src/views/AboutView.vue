@@ -3,14 +3,14 @@
     <Navbar :has-local-settings="false" />
 
     <div class="about-content">
-      <h1 class="page-title">About U'llai</h1>
+      <h1 class="page-title">About U'llai <span class="devanagari">(उल्लाई)</span></h1>
       
       <div class="about-card">
         
         <section class="section">
-          <h2>🎯 Why U'llai?</h2>
+          <h2>🎯 Why U'llai? <span class="devanagari">(उल्लाई)</span></h2>
           <p>
-            The name is a bridge between two worlds. In Konkani, <strong>Ullai</strong> means "to speak." 
+            The name is a bridge between two worlds. In Konkani, <strong>Ullai (उल्लाई)</strong> means "to speak." 
             In English, it sounds like <strong>You'll AI</strong>—a promise that with the help of artificial 
             intelligence, you will find your voice.
           </p>
@@ -123,11 +123,6 @@
 
         <div class="version-info">
           <p>Version {{ version }} | Built with ❤️ for better communication</p>
-          <p class="changelog-link">
-            <a href="https://github.com/sanjeethflautist/ProSpeak" target="_blank" rel="noopener">
-              View Changelog on GitHub
-            </a>
-          </p>
         </div>
       </div>
     </div>
@@ -170,6 +165,16 @@ const handleContainerClick = () => {
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
 }
 
+.page-title .devanagari {
+  font-size: 2rem;
+  opacity: 0.9;
+}
+
+.page-title .devanagari {
+  font-size: 2rem;
+  opacity: 0.9;
+}
+
 .about-card {
   background: white;
   border-radius: 20px;
@@ -188,6 +193,19 @@ const handleContainerClick = () => {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.section h2 .devanagari {
+  font-size: 1.4rem;
+  color: #667eea;
+  font-weight: normal;
+}
+
+.section h2 .devanagari {
+  font-size: 1.4rem;
+  color: #667eea;
+  font-weight: normal;
 }
 
 .section h3 {
@@ -284,27 +302,15 @@ const handleContainerClick = () => {
 
 .version-info {
   text-align: center;
- 
-
-.version-info p {
-  margin: 8px 0;
-}
-
-.changelog-link a {
-  color: #667eea;
-  text-decoration: none;
-  font-weight: 600;
-  transition: color 0.3s ease;
-}
-
-.changelog-link a:hover {
-  color: #764ba2;
-  text-decoration: underline;
-} color: #999;
+  color: #999;
   font-size: 0.9rem;
   margin-top: 40px;
   padding-top: 20px;
   border-top: 1px solid #eee;
+}
+
+.version-info p {
+  margin: 8px 0;
 }
 
 @media (max-width: 768px) {
