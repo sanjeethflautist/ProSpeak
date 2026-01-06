@@ -1,5 +1,17 @@
 # U'llai Version History
 
+## Version 1.1.1 (2026-01-06)
+### Fixed
+- 🔧 **Automatic Username Generation**: Fixed database trigger to create usernames on signup
+- 🛡️ **RLS Policy Fix**: Added SECURITY DEFINER to bypass Row Level Security during user creation
+- 🔄 **Trigger Consolidation**: Combined user_profile and user_progress triggers to avoid conflicts
+- 🔐 **Account Deletion**: Fixed authStore.logout() -> authStore.signOut() in Settings
+- 🎯 **Fallback System**: Added RPC function as backup if trigger doesn't fire
+- ✅ **Error Handling**: Improved error handling that doesn't block user signup
+- 📝 **Signup Message**: Updated to "Please login" instead of email confirmation prompt
+
+---
+
 ## Version 1.1.0 (2026-01-06)
 ### Added
 - 🏆 **Leaderboard System**: Competitive rankings with total sentences, accuracy, and streak filters
