@@ -122,7 +122,12 @@
         </section>
 
         <div class="version-info">
-          <p>Version 1.0.0 | Built with ❤️ for better communication</p>
+          <p>Version {{ version }} | Built with ❤️ for better communication</p>
+          <p class="changelog-link">
+            <a href="https://github.com/sanjeethflautist/ProSpeak" target="_blank" rel="noopener">
+              View Changelog on GitHub
+            </a>
+          </p>
         </div>
       </div>
     </div>
@@ -130,12 +135,15 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Navbar from '../components/Navbar.vue'
 import { useAuthStore } from '../stores/auth'
+import packageInfo from '../../package.json'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const version = ref(packageInfo.version)
 
 const handleContainerClick = () => {
   // No action needed
@@ -276,7 +284,23 @@ const handleContainerClick = () => {
 
 .version-info {
   text-align: center;
-  color: #999;
+ 
+
+.version-info p {
+  margin: 8px 0;
+}
+
+.changelog-link a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.changelog-link a:hover {
+  color: #764ba2;
+  text-decoration: underline;
+} color: #999;
   font-size: 0.9rem;
   margin-top: 40px;
   padding-top: 20px;
