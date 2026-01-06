@@ -101,23 +101,9 @@ export const useAuthStore = defineStore('auth', {
 
       if (error) throw error
 
-      // Create initial user progress record
-      if (data.user) {
-        const { error: progressError } = await supabase.from('user_progress').insert({
-          user_id: data.user.id,
-          total_sessions: 0,
-          total_sentences: 0,
-          average_accuracy: 0,
-          current_streak: 0,
-          longest_streak: 0
-        })
-        
-        if (progressError) {
-          console.error('Error creating user progress:', progressError)
-          throw new Error('Database error saving new user. Please contact support.')
-        }
-      }
-
+      // Note: user_progress will be auto-created by database trigger
+      // No need to manually insert here as RLS policies would block it
+      
       return data
     },
 
