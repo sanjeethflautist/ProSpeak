@@ -105,7 +105,38 @@
       </div>
       
       <div class="settings-section">
-        <h2>👤 Account</h2>
+        <h2>� Privacy & Leaderboard</h2>
+        <div class="privacy-info">
+          <p><strong>GDPR Compliance:</strong> Your data is yours. We process your information as follows:</p>
+          <ul>
+            <li>🎯 <strong>Practice Data:</strong> Session scores and progress are stored to track your improvement</li>
+            <li>👤 <strong>Profile:</strong> Username and avatar are used for identification</li>
+            <li>🏆 <strong>Leaderboard:</strong> If enabled, your username, avatar, and stats are visible to all users</li>
+            <li>🔐 <strong>Security:</strong> All data encrypted at rest, API keys encrypted with AES-256</li>
+            <li>🗑️ <strong>Right to Erasure:</strong> You can delete all your data at any time using "Delete Account"</li>
+          </ul>
+        </div>
+        
+        <div class="privacy-toggle">
+          <div class="toggle-info">
+            <h3>🏆 Appear in Leaderboard</h3>
+            <p>Allow other users to see your username, avatar, and practice statistics in the public leaderboard.</p>
+            <p class="privacy-note">⚠️ When disabled, you can still view the leaderboard but won't appear in rankings.</p>
+          </div>
+          <label class="toggle-switch">
+            <input 
+              type="checkbox" 
+              v-model="showInLeaderboard"
+              @change="updateLeaderboardVisibility"
+              :disabled="updatingPrivacy"
+            />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      
+      <div class="settings-section">
+        <h2>�👤 Account</h2>
         <button @click="handleLogout" class="btn-secondary" style="width: 100%;">🚪 Logout</button>
       </div>
 
@@ -193,6 +224,8 @@ const usernameInput = ref('')
 const selectedAvatar = ref(null)
 const savingProfile = ref(false)
 const apiKeySection = ref(null)
+const showInLeaderboard = ref(true)
+const updatingPrivacy = ref(false)
 
 const avatarOptions = [
   'avatar1.svg', 'avatar2.svg', 'avatar3.svg', 'avatar4.svg',
@@ -257,8 +290,36 @@ const loadUserProfile = async () => {
     }
 
     currentProfile.value = data
+    showInLeaderboard.value = data.show_in_leaderboard ?? true
   } catch (error) {
     console.error('Load profile error:', error)
+  }
+}
+
+const updateLeaderboardVisibility = async () => {
+  try {
+    updatingPrivacy.value = true
+
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ 
+        show_in_leaderboard: showInLeaderboard.value,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', authStore.user.id)
+
+    if (error) throw error
+
+    alert(showInLeaderboard.value 
+      ? '✅ You will now appear in the leaderboard' 
+      : '✅ You are now hidden from the leaderboard')
+  } catch (error) {
+    console.error('Update leaderboard visibility error:', error)
+    alert('❌ Failed to update privacy settings: ' + error.message)
+    // Revert the toggle
+    showInLeaderboard.value = !showInLeaderboard.value
+  } finally {
+    updatingPrivacy.value = false
   }
 }
 
@@ -606,6 +667,118 @@ const deleteAccount = async () => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* Privacy Section */
+.privacy-info {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.privacy-info p {
+  margin: 0 0 0.75rem 0;
+  color: #333;
+  line-height: 1.6;
+}
+
+.privacy-info ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #555;
+}
+
+.privacy-info li {
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+}
+
+.privacy-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.toggle-info {
+  flex: 1;
+}
+
+.toggle-info h3 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.toggle-info p {
+  margin: 0 0 0.5rem 0;
+  color: #666;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.privacy-note {
+  font-size: 0.85rem;
+  color: #856404;
+  background: #fff3cd;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  margin-top: 0.75rem;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+  position: relative;
+  width: 60px;
+  height: 34px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+  border-radius: 34px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: #667eea;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(26px);
+}
+
+.toggle-switch input:disabled + .toggle-slider {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* API Key Section */

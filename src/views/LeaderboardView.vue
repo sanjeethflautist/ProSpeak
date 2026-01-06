@@ -178,10 +178,11 @@ const fetchLeaderboard = async () => {
       orderBy = 'current_streak'
     }
 
-    // Fetch all user profiles first
+    // Fetch all user profiles first (only those who opted in to leaderboard)
     const { data: profilesData, error: profilesError } = await supabase
       .from('user_profiles')
-      .select('user_id, username, avatar_url')
+      .select('user_id, username, avatar_url, show_in_leaderboard')
+      .eq('show_in_leaderboard', true)
       .limit(100)
 
     if (profilesError) {
