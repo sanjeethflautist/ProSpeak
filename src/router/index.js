@@ -7,6 +7,7 @@ import PracticeView from '../views/PracticeView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import StatsView from '../views/StatsView.vue'
 import SettingsView from '../views/SettingsView.vue'
+import LeaderboardView from '../views/LeaderboardView.vue'
 import SupportView from '../views/SupportView.vue'
 import AboutView from '../views/AboutView.vue'
 import ContactView from '../views/ContactView.vue'
@@ -51,6 +52,12 @@ const routes = [
     name: 'Stats',
     component: StatsView,
     meta: { requiresAuth: false }
+  },
+  {
+    path: '/leaderboard',
+    name: 'Leaderboard',
+    component: LeaderboardView,
+    meta: { requiresAuth: true }
   },
   {
     path: '/settings',
