@@ -103,7 +103,7 @@ export const useAuthStore = defineStore('auth', {
 
       // Create initial user progress record
       if (data.user) {
-        await supabase.from('user_progress').insert({
+        const { error: progressError } = await supabase.from('user_progress').insert({
           user_id: data.user.id,
           total_sessions: 0,
           total_sentences: 0,
@@ -111,6 +111,11 @@ export const useAuthStore = defineStore('auth', {
           current_streak: 0,
           longest_streak: 0
         })
+        
+        if (progressError) {
+          console.error('Error creating user progress:', progressError)
+          throw new Error('Database error saving new user. Please contact support.')
+        }
       }
 
       return data
