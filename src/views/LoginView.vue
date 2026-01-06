@@ -110,7 +110,7 @@ const handleSubmit = async () => {
       router.push('/practice')
     } else {
       await authStore.signUp(email.value, password.value)
-      success.value = 'Account created! Please check your email to confirm.'
+      success.value = 'Account created! Please login'
       setTimeout(() => {
         activeTab.value = 'login'
         success.value = ''
