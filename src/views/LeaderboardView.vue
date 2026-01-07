@@ -42,10 +42,10 @@
           :class="['leaderboard-item', { 'current-user': user.user_id === authStore.user?.id }]"
         >
           <div class="rank-badge">
-            <span v-if="index === 0" class="rank-icon">🥇</span>
-            <span v-else-if="index === 1" class="rank-icon">🥈</span>
-            <span v-else-if="index === 2" class="rank-icon">🥉</span>
-            <span v-else class="rank-number">#{{ index + 1 }}</span>
+            <span v-if="user.rank === 1" class="rank-icon">🥇</span>
+            <span v-else-if="user.rank === 2" class="rank-icon">🥈</span>
+            <span v-else-if="user.rank === 3" class="rank-icon">🥉</span>
+            <span v-else class="rank-number">#{{ user.rank }}</span>
           </div>
 
           <div class="user-avatar">
@@ -165,6 +165,47 @@ const filterOptions = [
   { value: 'streak', label: 'Current Streak', icon: '🔥' }
 ]
 
+// Computed property to calculate ranks with proper handling of ties
+const getRankValue = (user) => {
+  if (selectedFilter.value === 'accuracy') {
+    return user.average_accuracy || 0
+  } else if (selectedFilter.value === 'streak') {
+    return user.current_streak || 0
+  }
+  return user.total_sentences || 0
+}
+
+const calculateRanks = (users) => {
+  if (!users || users.length === 0) return users
+  
+  let currentRank = 1
+  let previousValue = null
+  let usersWithSameRank = 0
+  
+  return users.map((user, index) => {
+    const currentValue = getRankValue(user)
+    
+    if (previousValue !== null && currentValue < previousValue) {
+      // Different score, advance rank by number of users with previous score
+      currentRank += usersWithSameRank
+      usersWithSameRank = 1
+    } else if (previousValue !== null && currentValue === previousValue) {
+      // Same score, increment tie counter
+      usersWithSameRank++
+    } else {
+      // First user
+      usersWithSameRank = 1
+    }
+    
+    previousValue = currentValue
+    
+    return {
+      ...user,
+      rank: currentRank
+    }
+  })
+}
+
 const fetchLeaderboard = async () => {
   loading.value = true
   error.value = null
@@ -220,7 +261,7 @@ const fetchLeaderboard = async () => {
     })
 
     // Combine profile and progress data
-    leaderboardData.value = profilesData
+    const combinedData = profilesData
       .map(profile => {
         const progress = progressMap[profile.user_id]
         return {
@@ -242,6 +283,9 @@ const fetchLeaderboard = async () => {
       })
       // Take top 50
       .slice(0, 50)
+    
+    // Calculate ranks with tie handling
+    leaderboardData.value = calculateRanks(combinedData)
 
     // Fetch current user's profile and stats
     if (authStore.user) {
@@ -262,17 +306,20 @@ const fetchLeaderboard = async () => {
       currentUserStats.value = statsData
 
       // Calculate user's rank
-      const userIndex = leaderboardData.value.findIndex(u => u.user_id === authStore.user.id)
-      if (userIndex >= 0) {
-        currentUserRank.value = userIndex + 1
+      const userInLeaderboard = leaderboardData.value.find(u => u.user_id === authStore.user.id)
+      if (userInLeaderboard) {
+        currentUserRank.value = userInLeaderboard.rank
       } else if (statsData) {
         // User not in top 50, calculate their actual rank
-        const { count } = await supabase
+        const userValue = statsData[orderBy] || 0
+        
+        // Count users with better scores
+        const { count: betterCount } = await supabase
           .from('user_progress')
           .select('*', { count: 'exact', head: true })
-          .gt(orderBy, statsData[orderBy] || 0)
-
-        currentUserRank.value = (count || 0) + 1
+          .gt(orderBy, userValue)
+        
+        currentUserRank.value = (betterCount || 0) + 1
       }
     }
   } catch (err) {
