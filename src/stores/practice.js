@@ -6,7 +6,9 @@ export const usePracticeStore = defineStore('practice', {
     todaySentence: null,
     loading: false,
     sessions: [],
-    userProgress: null
+    userProgress: null,
+    customContent: [],
+    currentCustomContent: null
   }),
 
   actions: {
@@ -41,20 +43,28 @@ export const usePracticeStore = defineStore('practice', {
       }
     },
 
-    async savePracticeSession(sentenceId, accuracyScore, duration, aiScore = null) {
+    async savePracticeSession(sentenceId, accuracyScore, duration, aiScore = null, customContentId = null) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
+      const sessionData = {
+        user_id: user.id,
+        accuracy_score: accuracyScore,
+        ai_score: aiScore,
+        duration_seconds: duration,
+        completed: accuracyScore >= 70 // Consider 70% as completed
+      }
+
+      // Add either sentence_id or custom_content_id
+      if (customContentId) {
+        sessionData.custom_content_id = customContentId
+      } else {
+        sessionData.sentence_id = sentenceId
+      }
+
       const { data, error } = await supabase
         .from('practice_sessions')
-        .insert({
-          user_id: user.id,
-          sentence_id: sentenceId,
-          accuracy_score: accuracyScore,
-          ai_score: aiScore,
-          duration_seconds: duration,
-          completed: accuracyScore >= 70 // Consider 70% as completed
-        })
+        .insert(sessionData)
         .select()
         .single()
 
@@ -244,6 +254,106 @@ export const usePracticeStore = defineStore('practice', {
       this.todaySentence = null
       
       console.log('Local state cleared')
+    },
+
+    // Custom Content Methods
+    async createCustomContent(content, title = null, category = 'custom') {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      const { data, error } = await supabase
+        .from('custom_content')
+        .insert({
+          user_id: user.id,
+          content: content.trim(),
+          title: title?.trim() || null,
+          category,
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Add to local state
+      this.customContent.push(data)
+      return data
+    },
+
+    async fetchCustomContent() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return []
+
+      const { data, error } = await supabase
+        .from('custom_content')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error fetching custom content:', error)
+        return []
+      }
+
+      this.customContent = data || []
+      return data
+    },
+
+    async deleteCustomContent(id) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      const { error } = await supabase
+        .from('custom_content')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      // Remove from local state
+      this.customContent = this.customContent.filter(c => c.id !== id)
+    },
+
+    async updateCustomContent(id, updates) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      const { data, error } = await supabase
+        .from('custom_content')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Update local state
+      const index = this.customContent.findIndex(c => c.id === id)
+      if (index !== -1) {
+        this.customContent[index] = data
+      }
+
+      return data
+    },
+
+    async toggleFavoriteCustomContent(id) {
+      const content = this.customContent.find(c => c.id === id)
+      if (!content) return
+
+      await this.updateCustomContent(id, { is_favorite: !content.is_favorite })
+    },
+
+    setCurrentCustomContent(content) {
+      this.currentCustomContent = content
+    },
+
+    clearCurrentCustomContent() {
+      this.currentCustomContent = null
     }
   }
 })

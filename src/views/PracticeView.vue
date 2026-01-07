@@ -15,22 +15,45 @@
     </div>
 
     <div class="practice-content">
-      <h1 class="page-title">Today's Practice</h1>
+      <div class="page-header">
+        <h1 class="page-title">
+          {{ practiceMode === 'daily' ? "Today's Practice" : "Custom Content Practice" }}
+        </h1>
+        <div class="mode-toggle">
+          <button 
+            @click="switchMode('daily')" 
+            class="mode-btn" 
+            :class="{ active: practiceMode === 'daily' }"
+          >
+            📅 Daily Sentences
+          </button>
+          <button 
+            @click="switchMode('custom')" 
+            class="mode-btn" 
+            :class="{ active: practiceMode === 'custom' }"
+          >
+            📝 My Content
+          </button>
+        </div>
+      </div>
       
-      <div v-if="loading" class="loading">Loading today's sentence...</div>
+      <div v-if="loading" class="loading">Loading...</div>
 
       <div v-else-if="sentence" class="practice-card">
         <div class="header">
           <div class="header-actions">
             <span class="category-badge">{{ formatCategory(sentence.category) }}</span>
-            <button @click="refreshSentence" class="refresh-btn" :disabled="loading" title="Get a different sentence">
+            <button v-if="practiceMode === 'daily'" @click="refreshSentence" class="refresh-btn" :disabled="loading" title="Get a different sentence">
+              <RefreshCw :size="18" />
+            </button>
+            <button v-else @click="showCustomContentModal = true" class="refresh-btn" title="Choose different content">
               <RefreshCw :size="18" />
             </button>
           </div>
         </div>
 
         <div class="sentence-display">
-          <p class="sentence">{{ sentence.sentence }}</p>
+          <p class="sentence">{{ practiceMode === 'daily' ? sentence.sentence : sentence.content }}</p>
         </div>
 
         <div class="controls">
@@ -121,9 +144,27 @@
 
         <div v-if="error" class="error">{{ error }}</div>
       </div>
+
+      <!-- No custom content selected state -->
+      <div v-else-if="practiceMode === 'custom'" class="empty-custom-state">
+        <div class="empty-content">
+          <span class="empty-icon">📝</span>
+          <h2>No Content Selected</h2>
+          <p>Choose existing content or create new content to practice with</p>
+          <button @click="showCustomContentModal = true" class="btn-add-content">
+            <span>+</span> Add or Choose Content
+          </button>
+        </div>
+      </div>
     </div>
 
-
+    <!-- Custom Content Modal -->
+    <CustomContentModal
+      :show="showCustomContentModal"
+      :initial-mode="customContentInitialMode"
+      @close="showCustomContentModal = false"
+      @content-selected="handleCustomContentSelected"
+    />
   </div>
 </template>
 
@@ -135,6 +176,7 @@ import { useAuthStore } from '../stores/auth'
 import { usePracticeStore } from '../stores/practice'
 import { speakText, stopSpeaking, SpeechRecognizer, calculateAccuracy, analyzeVoiceWithAI } from '../lib/speech'
 import Navbar from '../components/Navbar.vue'
+import CustomContentModal from '../components/CustomContentModal.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -156,6 +198,11 @@ const hasApiKey = ref(false)
 const recordedAudioBlob = ref(null)
 const isPlayingRecording = ref(false)
 const audioElement = ref(null)
+
+// Custom content state
+const practiceMode = ref('daily') // 'daily' or 'custom'
+const showCustomContentModal = ref(false)
+const customContentInitialMode = ref('list')
 
 let recognizer = null
 
@@ -208,6 +255,39 @@ const refreshSentence = async () => {
     loading.value = false
   }
 }
+
+const switchMode = async (mode) => {
+  if (practiceMode.value === mode) return
+  
+  practiceMode.value = mode
+  loading.value = true
+  error.value = ''
+  sentence.value = null
+  
+  // Reset practice state
+  tryAgain()
+  
+  try {
+    if (mode === 'daily') {
+      sentence.value = await practiceStore.fetchTodaySentence()
+    } else {
+      // Show modal to choose or create content
+      customContentInitialMode.value = 'list'
+      showCustomContentModal.value = true
+    }
+  } catch (err) {
+    error.value = err.message || 'Failed to load content'
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleCustomContentSelected = (content) => {
+  sentence.value = content
+  practiceStore.setCurrentCustomContent(content)
+  tryAgain() // Reset any previous practice state
+}
+
 
 // Consolidated onMounted hook
 onMounted(async () => {
@@ -262,7 +342,8 @@ const toggleAudio = async () => {
   try {
     isPlaying.value = true
     error.value = ''
-    await speakText(sentence.value.sentence)
+    const textToSpeak = practiceMode.value === 'daily' ? sentence.value.sentence : sentence.value.content
+    await speakText(textToSpeak)
   } catch (err) {
     console.log('Audio stopped or error:', err)
   } finally {
@@ -346,18 +427,27 @@ const stopRecording = async () => {
     userTranscript.value = result.text
     recordedAudioBlob.value = result.audioBlob
 
+    // Get the expected text based on mode
+    const expectedText = practiceMode.value === 'daily' ? sentence.value.sentence : sentence.value.content
+
     // Calculate accuracy
-    accuracyScore.value = parseFloat(calculateAccuracy(sentence.value.sentence, result.text))
+    accuracyScore.value = parseFloat(calculateAccuracy(expectedText, result.text))
 
     // Get AI analysis with audio (only if completeness score >= 40%)
     if (accuracyScore.value >= 40) {
       console.log('Starting AI analysis...')
       analyzingAI.value = true
       try {
+        // Determine content type and category for AI analysis
+        const contentType = practiceMode.value === 'daily' ? 'business' : 'custom'
+        const contentCategory = practiceMode.value === 'custom' ? sentence.value.category : null
+        
         const aiResult = await analyzeVoiceWithAI(
           result.text, 
-          sentence.value.sentence, 
-          result.audioBlob
+          expectedText, 
+          result.audioBlob,
+          contentType,
+          contentCategory
         )
         console.log('AI Analysis result:', aiResult)
         if (aiResult && aiResult.aiScore) {
@@ -381,13 +471,24 @@ const stopRecording = async () => {
     // Calculate duration
     const duration = Math.floor((Date.now() - startTime.value) / 1000)
 
-    // Save session
-    await practiceStore.savePracticeSession(
-      sentence.value.id,
-      accuracyScore.value,
-      duration,
-      aiScore.value
-    )
+    // Save session with appropriate ID based on mode
+    if (practiceMode.value === 'daily') {
+      await practiceStore.savePracticeSession(
+        sentence.value.id,
+        accuracyScore.value,
+        duration,
+        aiScore.value,
+        null
+      )
+    } else {
+      await practiceStore.savePracticeSession(
+        null,
+        accuracyScore.value,
+        duration,
+        aiScore.value,
+        sentence.value.id
+      )
+    }
   } catch (err) {
     console.error('Stop recording error:', err)
     error.value = err.message || 'Failed to process recording.'
@@ -454,13 +555,56 @@ const goToSettings = () => {
   padding: 40px 20px 60px 20px;
 }
 
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
 .page-title {
   color: white;
   font-size: 2.5rem;
-  margin-bottom: 30px;
+  margin: 0;
   text-align: center;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
 }
+
+.mode-toggle {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.mode-btn {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  color: white;
+  border: 2px solid transparent;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mode-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.mode-btn.active {
+  background: white;
+  color: #667eea;
+  border-color: white;
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+}
+
 
 .warning-banner {
   background: linear-gradient(135deg, #ff9a00 0%, #ff6b6b 100%);
@@ -1676,5 +1820,72 @@ const goToSettings = () => {
     font-size: 0.85rem;
     padding: 10px 20px;
   }
+
+  .mode-toggle {
+    gap: 8px;
+  }
+
+  .mode-btn {
+    font-size: 0.85rem;
+    padding: 10px 16px;
+  }
+}
+
+/* Empty custom content state */
+.empty-custom-state {
+  background: white;
+  border-radius: 24px;
+  padding: 80px 40px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+.empty-content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.empty-icon {
+  font-size: 4rem;
+}
+
+.empty-content h2 {
+  color: #1f2937;
+  font-size: 1.8rem;
+  margin: 0;
+}
+
+.empty-content p {
+  color: #6b7280;
+  font-size: 1.1rem;
+  margin: 0;
+  max-width: 400px;
+}
+
+.btn-add-content {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn-add-content:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-add-content span {
+  font-size: 1.5rem;
 }
 </style>

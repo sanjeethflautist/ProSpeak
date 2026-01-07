@@ -373,7 +373,7 @@ export function calculateAccuracy(original, spoken) {
 }
 
 // Analyze voice with AI
-export async function analyzeVoiceWithAI(spokenText, originalText, audioBlob) {
+export async function analyzeVoiceWithAI(spokenText, originalText, audioBlob, contentType = 'business', category = null) {
   try {
     // Get the current session to ensure auth token is passed
     const { data: { session } } = await supabase.auth.getSession()
@@ -406,7 +406,9 @@ export async function analyzeVoiceWithAI(spokenText, originalText, audioBlob) {
         spokenText,
         originalText,
         audioBase64: base64Audio,
-        mimeType: audioBlob.type
+        mimeType: audioBlob.type,
+        contentType,
+        category
       })
     })
 
@@ -422,9 +424,9 @@ export async function analyzeVoiceWithAI(spokenText, originalText, audioBlob) {
     console.log('Function success data:', data)
     
     return data
-    return data
   } catch (error) {
     console.error('AI analysis error:', error)
     throw error
   }
 }
+
