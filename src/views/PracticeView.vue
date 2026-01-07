@@ -80,6 +80,25 @@
               </span>
             </div>
           </button>
+
+          <button 
+            @click="toggleVideoCapture" 
+            class="control-btn video-toggle-btn"
+            :class="{ active: videoCaptureEnabled }"
+            :title="videoCaptureEnabled ? 'Disable video capture' : 'Enable video capture'"
+          >
+            <div class="btn-content">
+              <div class="toggle-switch">
+                <div class="toggle-slider" :class="{ on: videoCaptureEnabled }"></div>
+              </div>
+              <span class="btn-text">Video {{ videoCaptureEnabled ? 'On' : 'Off' }}</span>
+            </div>
+          </button>
+        </div>
+
+        <!-- Video Privacy Notice -->
+        <div v-if="videoCaptureEnabled" class="video-privacy-notice">
+          🔒 Videos are stored locally only and never uploaded
         </div>
 
         <!-- Recording indicator -->
@@ -145,6 +164,35 @@
         <div v-if="error" class="error">{{ error }}</div>
       </div>
 
+      <!-- Video Preview -->
+      <div v-if="videoCaptureEnabled && isRecording" class="video-container">
+        <video 
+          ref="videoPreview" 
+          autoplay 
+          muted 
+          playsinline
+          class="video-preview"
+        ></video>
+        <div class="video-label">Recording...</div>
+      </div>
+
+      <!-- Recorded Video Replay -->
+      <div v-if="recordedVideoBlob" class="video-replay-section">
+        <div class="video-replay-header">
+          <h3>Review your video recording</h3>
+          <button @click="toggleVideoPlayback" class="play-video-btn">
+            <span v-if="isPlayingVideo">⏸️ Pause</span>
+            <span v-else>▶️ Play Video</span>
+          </button>
+        </div>
+        <video 
+          ref="videoReplay" 
+          playsinline
+          class="video-replay"
+          :class="{ playing: isPlayingVideo }"
+        ></video>
+      </div>
+
       <!-- No custom content selected state -->
       <div v-else-if="practiceMode === 'custom'" class="empty-custom-state">
         <div class="empty-content">
@@ -203,6 +251,16 @@ const audioElement = ref(null)
 const practiceMode = ref('daily') // 'daily' or 'custom'
 const showCustomContentModal = ref(false)
 const customContentInitialMode = ref('list')
+
+// Video capture state
+const videoCaptureEnabled = ref(false)
+const videoPreview = ref(null)
+const videoReplay = ref(null)
+const recordedVideoBlob = ref(null)
+const isPlayingVideo = ref(false)
+let videoStream = null
+let mediaRecorder = null
+let videoChunks = []
 
 let recognizer = null
 
@@ -328,6 +386,8 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleEscKey)
+  // Clean up video stream
+  stopVideoStream()
 })
 
 const toggleAudio = async () => {
@@ -387,7 +447,20 @@ const startRecording = async () => {
     accuracyScore.value = 0
     aiScore.value = 0
     aiAnalysis.value = ''
+    recordedVideoBlob.value = null
     startTime.value = Date.now()
+    
+    // Start video recording if enabled
+    if (videoCaptureEnabled.value) {
+      if (!videoStream) {
+        await startVideoStream()
+      }
+      // Ensure preview is connected to stream
+      if (videoPreview.value && videoStream) {
+        videoPreview.value.srcObject = videoStream
+      }
+      await startVideoRecording()
+    }
     
     // Setup result handler for interim results
     recognizer.onResult = (result) => {
@@ -401,6 +474,10 @@ const startRecording = async () => {
       console.error('Recognition error:', err)
       error.value = err.message || 'Recording error occurred'
       isRecording.value = false
+      // Stop video recording on error
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop()
+      }
     }
     
     await recognizer.start()
@@ -408,11 +485,20 @@ const startRecording = async () => {
     console.error('Recording error:', err)
     error.value = err.message || 'Failed to record. Please check microphone permissions and try again.'
     isRecording.value = false
+    // Stop video recording on error
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop()
+    }
   }
 }
 
 const stopRecording = async () => {
   if (!recognizer) return
+  
+  // Stop video recording if active
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    stopVideoRecording()
+  }
   
   try {
     console.log('Stopping recording...')
@@ -502,10 +588,16 @@ const tryAgain = () => {
   aiScore.value = 0
   error.value = ''
   recordedAudioBlob.value = null
+  recordedVideoBlob.value = null
   isPlayingRecording.value = false
+  isPlayingVideo.value = false
   if (audioElement.value) {
     audioElement.value.pause()
     audioElement.value = null
+  }
+  if (videoReplay.value) {
+    videoReplay.value.pause()
+    videoReplay.value.src = ''
   }
 }
 
@@ -538,6 +630,142 @@ const togglePlayRecording = () => {
 
 const goToSettings = () => {
   router.push({ path: '/settings', query: { scrollTo: 'api-key' } })
+}
+
+// Video capture functions
+const toggleVideoCapture = async () => {
+  if (videoCaptureEnabled.value) {
+    // Disable video capture
+    await stopVideoStream()
+    videoCaptureEnabled.value = false
+  } else {
+    // Enable video capture
+    try {
+      await startVideoStream()
+      videoCaptureEnabled.value = true
+    } catch (err) {
+      console.error('Failed to start video:', err)
+      error.value = 'Failed to access camera. Please check camera permissions.'
+    }
+  }
+}
+
+const startVideoStream = async () => {
+  try {
+    videoStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        facingMode: 'user'
+      },
+      audio: false // We already capture audio separately
+    })
+    
+    if (videoPreview.value) {
+      videoPreview.value.srcObject = videoStream
+    }
+  } catch (err) {
+    console.error('Error accessing camera:', err)
+    throw new Error('Could not access camera')
+  }
+}
+
+const stopVideoStream = async () => {
+  if (videoStream) {
+    videoStream.getTracks().forEach(track => track.stop())
+    videoStream = null
+  }
+  if (videoPreview.value) {
+    videoPreview.value.srcObject = null
+  }
+}
+
+const startVideoRecording = async () => {
+  if (!videoStream) return
+  
+  try {
+    videoChunks = []
+    mediaRecorder = new MediaRecorder(videoStream, {
+      mimeType: 'video/webm;codecs=vp8'
+    })
+    
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) {
+        videoChunks.push(event.data)
+      }
+    }
+    
+    mediaRecorder.onstop = () => {
+      const videoBlob = new Blob(videoChunks, { type: 'video/webm' })
+      recordedVideoBlob.value = videoBlob
+      console.log('Video recording saved:', videoBlob.size, 'bytes')
+    }
+    
+    mediaRecorder.start()
+    console.log('Video recording started')
+  } catch (err) {
+    console.error('Failed to start video recording:', err)
+  }
+}
+
+const stopVideoRecording = () => {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop()
+    console.log('Video recording stopped')
+  }
+}
+
+const toggleVideoPlayback = () => {
+  if (!recordedVideoBlob.value || !videoReplay.value) return
+  
+  if (isPlayingVideo.value) {
+    // Pause both video and audio
+    videoReplay.value.pause()
+    if (audioElement.value) {
+      audioElement.value.pause()
+    }
+    isPlayingVideo.value = false
+    isPlayingRecording.value = false
+    return
+  }
+  
+  // Play video
+  const videoUrl = URL.createObjectURL(recordedVideoBlob.value)
+  videoReplay.value.src = videoUrl
+  
+  videoReplay.value.onended = () => {
+    isPlayingVideo.value = false
+    isPlayingRecording.value = false
+    URL.revokeObjectURL(videoUrl)
+  }
+  
+  videoReplay.value.onerror = () => {
+    isPlayingVideo.value = false
+    error.value = 'Failed to play video'
+    URL.revokeObjectURL(videoUrl)
+  }
+  
+  videoReplay.value.play()
+  isPlayingVideo.value = true
+  
+  // Play audio simultaneously if available
+  if (recordedAudioBlob.value) {
+    const audioUrl = URL.createObjectURL(recordedAudioBlob.value)
+    audioElement.value = new Audio(audioUrl)
+    
+    audioElement.value.onended = () => {
+      isPlayingRecording.value = false
+      URL.revokeObjectURL(audioUrl)
+    }
+    
+    audioElement.value.onerror = () => {
+      isPlayingRecording.value = false
+      URL.revokeObjectURL(audioUrl)
+    }
+    
+    audioElement.value.play()
+    isPlayingRecording.value = true
+  }
 }
 
 
@@ -1887,5 +2115,197 @@ const goToSettings = () => {
 
 .btn-add-content span {
   font-size: 1.5rem;
+}
+
+/* Video capture styles */
+.video-toggle-btn {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+}
+
+.video-toggle-btn:hover {
+  background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+}
+
+.video-toggle-btn.active {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+}
+
+.video-toggle-btn.active:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.toggle-switch {
+  width: 44px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.video-toggle-btn.active .toggle-switch {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.toggle-slider {
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-slider.on {
+  transform: translateX(20px);
+  background: #ffffff;
+}
+
+.video-container {
+  margin-top: 20px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #000;
+  position: relative;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.video-preview {
+  width: 100%;
+  max-height: 400px;
+  display: block;
+  object-fit: cover;
+}
+
+.video-label {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(16, 185, 129, 0.9);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.video-label::before {
+  content: '🔴';
+  animation: blink 1.5s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.video-replay-section {
+  margin-top: 30px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  border-radius: 16px;
+  border: 2px solid #d1d5db;
+}
+
+.video-replay-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.video-replay-header h3 {
+  color: #1f2937;
+  font-size: 1.2rem;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.play-video-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.play-video-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.video-replay {
+  width: 100%;
+  max-height: 500px;
+  border-radius: 12px;
+  background: #000;
+  display: block;
+  object-fit: cover;
+}
+
+.video-replay.playing {
+  box-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
+}
+
+.video-privacy-notice {
+  margin-top: 12px;
+  padding: 10px 16px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 8px;
+  color: #059669;
+  font-size: 0.9rem;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .video-preview {
+    max-height: 300px;
+  }
+
+  .video-replay {
+    max-height: 350px;
+  }
+
+  .video-replay-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .play-video-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .control-btn.video-toggle-btn {
+    min-width: 120px;
+    font-size: 0.85rem;
+  }
+
+  .controls {
+    flex-wrap: wrap;
+  }
 }
 </style>
