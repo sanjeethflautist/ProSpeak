@@ -6,6 +6,130 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Generate context-appropriate analysis prompt based on content type
+function generateAnalysisPrompt(
+  originalText: string, 
+  spokenText: string, 
+  audioAnalysis: string,
+  contentType: string,
+  category: string | null
+): string {
+  const baseInstruction = `You are an expert speech coach. Analyze this practice session by comparing the spoken version against the original text:
+
+ORIGINAL TEXT: "${originalText}"
+SPOKEN VERSION: "${spokenText}"
+${audioAnalysis}`
+
+  let contextualGuidance = ''
+  
+  // Determine content-specific guidance
+  switch (contentType) {
+    case 'custom':
+      switch (category) {
+        case 'presentation':
+          contextualGuidance = `
+This is a PRESENTATION practice. Focus on:
+- Professional delivery and confidence
+- Clear articulation for audience comprehension
+- Strategic pausing for emphasis and audience engagement
+- Pacing that maintains audience attention (not too fast, allows for processing)
+- Authoritative but approachable tone`
+          break
+          
+        case 'meeting':
+          contextualGuidance = `
+This is MEETING DIALOGUE practice. Focus on:
+- Natural conversational flow
+- Clear communication without being overly formal
+- Appropriate pacing for discussion (allowing for interruption/response)
+- Professional but accessible tone
+- Key points articulated with clarity`
+          break
+          
+        case 'speech':
+          contextualGuidance = `
+This is a FORMAL SPEECH practice. Focus on:
+- Compelling delivery with emotional resonance
+- Clear enunciation for larger audiences
+- Dramatic pausing for effect
+- Varied pacing to maintain engagement
+- Confident, inspiring tone`
+          break
+          
+        case 'conversation':
+          contextualGuidance = `
+This is CASUAL CONVERSATION practice. Focus on:
+- Natural, relaxed delivery
+- Conversational pacing (comfortable, not rushed)
+- Authentic tone without over-formality
+- Clear pronunciation while maintaining naturalness
+- Engaging, friendly delivery`
+          break
+          
+        case 'reading':
+          contextualGuidance = `
+This is READING/NARRATION practice. Focus on:
+- Consistent, clear enunciation
+- Appropriate pacing for comprehension
+- Expression that brings the text to life
+- Smooth flow without stumbling
+- Engaging tone that maintains listener interest`
+          break
+          
+        default:
+          contextualGuidance = `
+This is GENERAL CUSTOM CONTENT practice. Focus on:
+- Overall clarity and comprehension
+- Natural delivery appropriate to the content
+- Consistent pacing
+- Clear pronunciation of key terms
+- Confident, authentic expression`
+      }
+      break
+      
+    case 'business':
+    default:
+      contextualGuidance = `
+This is BUSINESS COMMUNICATION practice. Focus on:
+- Professional delivery and confidence
+- Clear pronunciation of business/technical terms
+- Appropriate pacing for professional settings (120-160 WPM ideal)
+- Strategic pausing for emphasis
+- Authoritative yet accessible tone`
+  }
+
+  const outputFormat = `
+Provide your analysis in TWO parts:
+
+1. SCORE (0-100): Rate overall performance based on:
+   - Word accuracy (compare word-by-word: substitutions, omissions, additions)
+   - Pronunciation clarity
+   - Speaking pace ${audioAnalysis ? '(measured WPM)' : ''}
+   - Delivery quality appropriate to the content type
+   - Overall effectiveness
+   Output format: "SCORE: XX"
+
+2. FEEDBACK (4-5 sentences maximum): Provide structured, actionable feedback:
+   
+   a) ACCURACY: Identify specific word substitutions or errors. Be precise with examples.
+   
+   b) PRONUNCIATION: Point out 2-3 key words that need clearer pronunciation.
+   
+   c) PACE & DELIVERY: Comment on speaking speed and rhythm. Suggest improvements appropriate to the content type.
+   
+   d) STRENGTHS: Acknowledge one positive aspect (energy, flow, clarity, tone, etc.).
+   
+   e) ACTION ITEM: End with ONE specific practice tip for immediate improvement.
+
+Output format:
+SCORE: XX
+FEEDBACK: [Your structured feedback covering accuracy, pronunciation, pace, strengths, and one action item]
+
+Keep it concise (4-5 sentences), specific, and actionable.`
+
+  return `${baseInstruction}${contextualGuidance}${outputFormat}`
+}
+
 serve(async (req) => {
   console.log('=== FUNCTION INVOKED ===')
   console.log('Method:', req.method)
@@ -17,8 +141,9 @@ serve(async (req) => {
 
   try {
     console.log('Parsing request body...')
-    const { spokenText, originalText, audioBase64 } = await req.json()
+    const { spokenText, originalText, audioBase64, contentType = 'business', category = null } = await req.json()
     console.log('Body parsed successfully')
+    console.log('Content type:', contentType, 'Category:', category)
     
     // Input validation
     if (!spokenText || !originalText) {
@@ -28,10 +153,10 @@ serve(async (req) => {
       )
     }
     
-    // Limit text length to prevent abuse
-    if (spokenText.length > 1000 || originalText.length > 1000) {
+    // Limit text length to prevent abuse (increased for custom content)
+    if (spokenText.length > 5000 || originalText.length > 5000) {
       return new Response(
-        JSON.stringify({ error: 'Text too long. Maximum 1000 characters.' }),
+        JSON.stringify({ error: 'Text too long. Maximum 5000 characters.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -136,38 +261,8 @@ Speaking Rate: ${wordsPerMinute} words per minute ${wordsPerMinute < 120 ? '(slo
 Audio Duration: ${audioDuration.toFixed(1)} seconds.`
     }
 
-    const prompt = `You are an expert speech coach. Analyze this practice session by comparing the spoken version against the original sentence:
-
-ORIGINAL SENTENCE: "${originalText}"
-SPOKEN VERSION: "${spokenText}"
-${audioAnalysis}
-
-Provide your analysis in TWO parts:
-
-1. SCORE (0-100): Rate overall performance based on:
-   - Word accuracy (compare word-by-word: substitutions, omissions, additions)
-   - Pronunciation clarity
-   - Speaking pace (ideal: 120-160 WPM)
-   - Overall delivery quality
-   Output format: "SCORE: XX"
-
-2. FEEDBACK (4-5 sentences maximum): Provide structured, actionable feedback:
-   
-   a) ACCURACY: Identify specific word substitutions or errors (e.g., "monolithic" → "monalities", "platform" → "blood form"). Be precise.
-   
-   b) PRONUNCIATION: Point out 2-3 key words that need clearer pronunciation. Suggest focusing on these specific terms.
-   
-   c) PACE & RHYTHM: Comment on speaking speed ${audioAnalysis ? '(based on measured WPM)' : ''}. If too fast/slow, suggest slowing down or speeding up. Mention where strategic pauses would help (after key phrases).
-   
-   d) STRENGTHS: Acknowledge one positive aspect (energy, flow, consistency, etc.).
-   
-   e) ACTION ITEM: End with ONE specific practice tip for immediate improvement.
-
-Output format:
-SCORE: XX
-FEEDBACK: [Your structured feedback covering accuracy, pronunciation, pace, strengths, and one action item]
-
-Keep it concise (4-5 sentences), specific, and actionable. Focus on comparing the original vs spoken text word-by-word.`
+    // Generate context-appropriate prompt based on content type and category
+    const prompt = generateAnalysisPrompt(originalText, spokenText, audioAnalysis, contentType, category)
 
     console.log('Calling Gemini API...')
     console.log('Using model: gemini-2.5-flash')
