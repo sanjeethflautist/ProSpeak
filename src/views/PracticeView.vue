@@ -85,7 +85,7 @@
             @click="toggleVideoCapture" 
             class="control-btn video-toggle-btn"
             :class="{ active: videoCaptureEnabled }"
-            :title="videoCaptureEnabled ? 'Disable video capture' : 'Enable video capture'"
+            :title="videoCaptureEnabled ? 'Disable video capture' : 'Enable video capture - Videos are stored locally only and never uploaded'"
           >
             <div class="btn-content">
               <div class="toggle-switch">
