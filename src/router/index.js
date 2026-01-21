@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import LoginView from '../views/LoginView.vue'
+import MaintenanceView from '../views/MaintenanceView.vue'
 import ForgotPasswordView from '../views/ForgotPasswordView.vue'
 import ResetPasswordView from '../views/ResetPasswordView.vue'
 import PracticeView from '../views/PracticeView.vue'
@@ -15,7 +16,13 @@ import ContactView from '../views/ContactView.vue'
 const routes = [
   {
     path: '/',
-    redirect: '/login'
+    redirect: '/maintenance'
+  },
+  {
+    path: '/maintenance',
+    name: 'Maintenance',
+    component: MaintenanceView,
+    meta: { requiresAuth: false }
   },
   {
     path: '/login',
@@ -89,11 +96,20 @@ const router = createRouter({
   history: createWebHistory(),
   routes,
   scrollBehavior(to, from, savedPosition) {
-    // Always scroll to top when navigating to a new route
-    return { top: 0, behavior: 'instant' }
+    return { top: 0 }
   }
 })
 
+router.beforeEach((to, from, next) => {
+  // Always redirect to maintenance page
+  if (to.path !== '/maintenance') {
+    next('/maintenance')
+  } else {
+    next()
+  }
+})
+
+/*
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
   
@@ -105,5 +121,6 @@ router.beforeEach((to, from, next) => {
     next()
   }
 })
+*/
 
 export default router
