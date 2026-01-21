@@ -156,40 +156,47 @@ export class SpeechRecognizer {
 
     // Start audio recording
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        } 
-      })
-      const mimeType = getAudioFormat()
+      // Check if we are on Android where simultaneous recording might cause issues with SpeechRecognition
+      const isAndroid = /android/i.test(navigator.userAgent)
       
-      // Check if the mimeType is supported
-      const options = MediaRecorder.isTypeSupported(mimeType) 
-        ? { mimeType } 
-        : {}
-      
-      this.mediaRecorder = new MediaRecorder(stream, options)
-      
-      this.mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          this.audioChunks.push(event.data)
+      // On Android, we prioritize SpeechRecognition (text) over MediaRecorder (audio file)
+      // because they often conflict when accessing the microphone simultaneously via different APIs.
+      // This ensures the "no speech detected" error is resolved.
+      if (!isAndroid) {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          } 
+        })
+        const mimeType = getAudioFormat()
+        
+        // Check if the mimeType is supported
+        const options = MediaRecorder.isTypeSupported(mimeType) 
+          ? { mimeType } 
+          : {}
+        
+        this.mediaRecorder = new MediaRecorder(stream, options)
+        
+        this.mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            this.audioChunks.push(event.data)
+          }
         }
-      }
 
-      this.mediaRecorder.onerror = (error) => {
-        console.error('MediaRecorder error:', error)
-      }
+        this.mediaRecorder.onerror = (error) => {
+          console.error('MediaRecorder error:', error)
+        }
 
-      this.mediaRecorder.start(1000) // Collect data every second for mobile stability
+        this.mediaRecorder.start(1000) // Collect data every second for mobile stability
+      } else {
+        console.log('Android detected: Skipping MediaRecorder to ensure SpeechRecognition works')
+      }
     } catch (error) {
-      this.active = false
-      console.error('Microphone access error:', error)
-      if (this.onError) {
-        this.onError(new Error('Microphone access denied. Please enable microphone permissions.'))
-      }
-      return
+      // Only log error, don't stop the whole process as SpeechRecognition might still work
+      console.error('Microphone/MediaRecorder access error:', error)
+      // we don't return here, we let SpeechRecognition try its best
     }
 
     // Setup recognition handlers
@@ -384,11 +391,19 @@ export async function analyzeVoiceWithAI(spokenText, originalText, audioBlob, co
       throw new Error('Not authenticated. Please log in again.')
     }
     
-    // Convert audio blob to base64
-    const arrayBuffer = await audioBlob.arrayBuffer()
-    const base64Audio = btoa(
-      new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-    )
+    let base64Audio = null
+    let mimeType = null
+
+    if (audioBlob) {
+      // Convert audio blob to base64
+      const arrayBuffer = await audioBlob.arrayBuffer()
+      base64Audio = btoa(
+        new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+      )
+      mimeType = audioBlob.type
+    } else {
+      console.warn('No audio blob provided for AI analysis (likely Android device). Sending text only.')
+    }
 
     console.log('Calling analyze-speech with direct fetch...')
     
@@ -406,7 +421,7 @@ export async function analyzeVoiceWithAI(spokenText, originalText, audioBlob, co
         spokenText,
         originalText,
         audioBase64: base64Audio,
-        mimeType: audioBlob.type,
+        mimeType: mimeType,
         contentType,
         category
       })
