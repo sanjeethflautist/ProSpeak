@@ -129,9 +129,21 @@ export class SpeechRecognizer {
 
     this.recognition = new SpeechRecognition()
     this.recognition.lang = 'en-GB'
-    this.recognition.continuous = true  // Keep listening continuously
-    this.recognition.interimResults = true
-    this.recognition.maxAlternatives = 1
+    
+    // Configure based on platform
+    const isAndroid = /android/i.test(navigator.userAgent)
+    this.isAndroid = isAndroid // Store this property
+    
+    // Android works best with simpler settings to avoid "popping" and duplicates
+    if (isAndroid) {
+      this.recognition.continuous = false // Android often fails with continuous
+      this.recognition.interimResults = false // Disable partial results to avoid UI jumping
+      this.recognition.maxAlternatives = 1
+    } else {
+      this.recognition.continuous = true
+      this.recognition.interimResults = true
+      this.recognition.maxAlternatives = 1
+    }
 
     this.mediaRecorder = null
     this.audioChunks = []
@@ -139,7 +151,7 @@ export class SpeechRecognizer {
     this.collectedText = ''
     this.shouldRestart = false
     this.restartAttempts = 0
-    this.maxRestartAttempts = 10  // Increased restart attempts
+    this.maxRestartAttempts = 50  // Significantly increased to handle long sessions/pauses
 
     this.onResult = null
     this.onError = null
@@ -216,6 +228,12 @@ export class SpeechRecognizer {
       if (finalTranscript) {
         this.collectedText += finalTranscript
       }
+      
+      // On Androids with continuous=false, single results are always final
+      // We need to accumulate them manually across restarts
+      if (this.isAndroid && !this.recognition.continuous && finalTranscript) {
+        console.log('Android partial result:', finalTranscript)
+      }
 
       if (this.onResult) {
         this.onResult({
@@ -227,18 +245,28 @@ export class SpeechRecognizer {
 
     this.recognition.onend = () => {
       // Auto-restart for continuous recording until user stops
+      // On Android (continuous=false), this happens frequently, so we treat it as normal flow
       if (this.shouldRestart && this.active && this.restartAttempts < this.maxRestartAttempts) {
         this.restartAttempts++
-        console.log(`Auto-restarting recognition (attempt ${this.restartAttempts})`)
+        if (!this.isAndroid) { 
+           console.log(`Auto-restarting recognition (attempt ${this.restartAttempts})`)
+        }
+        
+        // Immediate restart for Android to minimize gap
+        const delay = this.isAndroid ? 10 : 100
+        
         setTimeout(() => {
           if (this.active && this.shouldRestart) {
             try {
               this.recognition.start()
             } catch (e) {
-              console.error('Failed to restart recognition:', e)
+              // Ignore "already started" errors
+              if (e.name !== 'InvalidStateError') {
+                 console.error('Failed to restart recognition:', e)
+              }
             }
           }
-        }, 100) // Small delay before restart
+        }, delay) 
       }
     }
 
