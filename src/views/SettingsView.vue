@@ -103,6 +103,26 @@
         <p v-if="hasApiKey" class="api-key-status success">✅ API key saved</p>
         <p v-else class="api-key-status warning">⚠️ No API key saved - using default (may have rate limits)</p>
       </div>
+
+      <div class="settings-section">
+        <h2>🛠️ Practice Preferences</h2>
+        
+        <div class="privacy-toggle">
+          <div class="toggle-info">
+            <h3>📹 Display Video on Practice</h3>
+            <p>Show your video feed while practicing. Useful for monitoring your facial expressions and gestures in real-time.</p>
+          </div>
+          <label class="toggle-switch">
+            <input 
+              type="checkbox" 
+              v-model="showVideoOnPractice"
+              @change="updateVideoSetting"
+              :disabled="updatingVideoSetting"
+            />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
       
       <div class="settings-section">
         <h2>� Privacy & Leaderboard</h2>
@@ -226,6 +246,8 @@ const savingProfile = ref(false)
 const apiKeySection = ref(null)
 const showInLeaderboard = ref(true)
 const updatingPrivacy = ref(false)
+const showVideoOnPractice = ref(false)
+const updatingVideoSetting = ref(false)
 
 const avatarOptions = [
   'avatar1.svg', 'avatar2.svg', 'avatar3.svg', 'avatar4.svg',
@@ -246,6 +268,7 @@ const handleEscKey = (e) => {
 onMounted(async () => {
   window.addEventListener('keydown', handleEscKey)
   hasApiKey.value = await authStore.hasGeminiApiKey()
+  await loadSettings()
   await loadUserProfile()
   
   // Check if we should scroll to API key section
@@ -273,6 +296,36 @@ watch(() => route.query.scrollTo, (newValue) => {
     })
   }
 })
+
+const loadSettings = async () => {
+  try {
+    const settings = await authStore.fetchUserSettings()
+    if (settings) {
+      // Default to false if not set, or use the value from DB
+      showVideoOnPractice.value = settings.show_video_on_practice === true
+    }
+  } catch (error) {
+    console.error('Error loading settings:', error)
+  }
+}
+
+const updateVideoSetting = async () => {
+  if (updatingVideoSetting.value) return
+  
+  updatingVideoSetting.value = true
+  try {
+    await authStore.updateUserSettings({
+      show_video_on_practice: showVideoOnPractice.value
+    })
+  } catch (error) {
+    console.error('Failed to update video setting:', error)
+    // Revert the switch if update failed
+    showVideoOnPractice.value = !showVideoOnPractice.value
+    alert('Failed to save preference. Please try again.')
+  } finally {
+    updatingVideoSetting.value = false
+  }
+}
 
 const loadUserProfile = async () => {
   try {

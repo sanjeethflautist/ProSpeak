@@ -82,6 +82,7 @@
           </button>
 
           <button 
+            v-if="showVideoFeature"
             @click="toggleVideoCapture" 
             class="control-btn video-toggle-btn"
             :class="{ active: videoCaptureEnabled }"
@@ -238,6 +239,7 @@ const showCustomContentModal = ref(false)
 const customContentInitialMode = ref('list')
 
 // Video capture state
+const showVideoFeature = ref(false)
 const videoCaptureEnabled = ref(false)
 const videoPreview = ref(null)
 const videoReplay = ref(null)
@@ -358,6 +360,16 @@ onMounted(async () => {
 
     // Check if API key exists (used for AI analysis)
     hasApiKey.value = await authStore.hasGeminiApiKey()
+
+    // Fetch user settings for video preference
+    try {
+      const settings = await authStore.fetchUserSettings()
+      if (settings) {
+        showVideoFeature.value = settings.show_video_on_practice === true
+      }
+    } catch (e) {
+      console.warn('Failed to fetch user settings', e)
+    }
 
     // Fetch today's sentence
     sentence.value = await practiceStore.fetchTodaySentence()

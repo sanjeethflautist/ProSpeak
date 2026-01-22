@@ -31,6 +31,48 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    async fetchUserSettings() {
+      if (!this.user) return null
+      
+      try {
+        const { data, error } = await supabase
+          .from('user_settings')
+          .select('*')
+          .eq('user_id', this.user.id)
+          .maybeSingle()
+        
+        if (error) throw error
+        return data
+      } catch (error) {
+        console.error('Error fetching settings:', error)
+        return null
+      }
+    },
+
+    async updateUserSettings(updates) {
+      if (!this.user) throw new Error('Not authenticated')
+
+      try {
+        const { data, error } = await supabase
+          .from('user_settings')
+          .upsert({ 
+            user_id: this.user.id,
+            ...updates,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id'
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+        return data
+      } catch (error) {
+        console.error('Error updating settings:', error)
+        throw error
+      }
+    },
+
     async saveGeminiApiKey(apiKey) {
       if (!this.user) throw new Error('Not authenticated')
       
