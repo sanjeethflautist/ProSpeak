@@ -71,7 +71,7 @@
           <div class="user-score">
             <div class="score-value">
               <template v-if="selectedFilter === 'accuracy'">
-                {{ (user.average_accuracy || 0).toFixed(1) }}%
+                {{ (user.average_accuracy || 0).toFixed(0) }}%
               </template>
               <template v-else-if="selectedFilter === 'streak'">
                 {{ user.current_streak || 0 }}
@@ -82,7 +82,7 @@
               </template>
             </div>
             <div class="score-label">
-              <template v-if="selectedFilter === 'accuracy'">Accuracy</template>
+              <template v-if="selectedFilter === 'accuracy'">AI Score</template>
               <template v-else-if="selectedFilter === 'streak'">Day Streak</template>
               <template v-else-if="selectedFilter === 'total'">Sentences</template>
             </div>
@@ -121,7 +121,7 @@
           <div class="user-score">
             <div class="score-value">
               <template v-if="selectedFilter === 'accuracy'">
-                {{ (currentUserStats?.average_accuracy || 0).toFixed(1) }}%
+                {{ (currentUserStats?.average_accuracy || 0).toFixed(0) }}%
               </template>
               <template v-else-if="selectedFilter === 'streak'">
                 {{ currentUserStats?.current_streak || 0 }}
@@ -132,7 +132,7 @@
               </template>
             </div>
             <div class="score-label">
-              <template v-if="selectedFilter === 'accuracy'">Accuracy</template>
+              <template v-if="selectedFilter === 'accuracy'">AI Score</template>
               <template v-else-if="selectedFilter === 'streak'">Day Streak</template>
               <template v-else-if="selectedFilter === 'total'">Sentences</template>
             </div>
@@ -161,7 +161,7 @@ const selectedFilter = ref('total') // 'accuracy', 'streak', 'total'
 
 const filterOptions = [
   { value: 'total', label: 'Total Sentences', icon: '📊' },
-  { value: 'accuracy', label: 'Accuracy', icon: '🎯' },
+  { value: 'accuracy', label: 'AI Score %', icon: '🎯' }, // Renamed from Accuracy
   { value: 'streak', label: 'Current Streak', icon: '🔥' }
 ]
 

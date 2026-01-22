@@ -26,12 +26,6 @@
           <div class="stat-value">{{ stats.totalSessions }}</div>
           <div class="stat-label">Total Sessions</div>
         </div>
-
-        <div class="stat-card">
-          <div class="stat-icon">✅</div>
-          <div class="stat-value">{{ stats.completedSessions }}</div>
-          <div class="stat-label">Completed Sessions</div>
-        </div>
       </div>
     </div>
   </div>

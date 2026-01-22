@@ -16,17 +16,9 @@
             <div class="stat-label">Total Sessions</div>
           </div>
 
-          <div class="stat-card">
-            <div class="stat-icon">✅</div>
-            <div class="stat-value">{{ progress?.total_sentences || 0 }}</div>
-            <div class="stat-label">Completed Sentences</div>
-          </div>
+          <!-- Completed Sentences removed -->
 
-          <div class="stat-card">
-            <div class="stat-icon">🎯</div>
-            <div class="stat-value">{{ progress?.average_accuracy || 0 }}%</div>
-            <div class="stat-label">Completeness Score</div>
-          </div>
+          <!-- Completeness Score removed -->
 
           <div class="stat-card">
             <div class="stat-icon">🤖</div>
@@ -44,50 +36,20 @@
         <!-- Charts Section -->
         <div class="charts-section">
           <div class="chart-card">
-            <h3>Accuracy Over Time</h3>
-            <canvas ref="accuracyChartCanvas"></canvas>
+            <h3>AI Score Over Time</h3>
+            <div class="chart-wrapper">
+              <canvas ref="accuracyChartCanvas"></canvas>
+            </div>
           </div>
 
           <div class="chart-card">
             <h3>Practice Frequency</h3>
-            <canvas ref="frequencyChartCanvas"></canvas>
-          </div>
-        </div>
-
-        <!-- Recent Sessions -->
-        <div class="recent-sessions">
-          <h3>Recent Practice Sessions</h3>
-          <div v-if="sessions.length === 0" class="empty-state">
-            No practice sessions yet. Start practicing today!
-          </div>
-          <div v-else class="sessions-list">
-            <div v-for="session in sessions" :key="session.id" class="session-item">
-              <div class="session-header">
-                <span class="session-date">{{ formatDate(session.created_at) }}</span>
-                <div class="session-scores">
-                  <span class="score-badge completeness" :class="getAccuracyClass(session.accuracy_score)">
-                    📊 {{ session.accuracy_score }}%
-                  </span>
-                  <span v-if="session.ai_score" class="score-badge ai-score">
-                    🤖 {{ session.ai_score }}%
-                  </span>
-                </div>
-              </div>
-              <div class="session-meta">
-                <span class="session-category">{{ formatCategory(session.daily_sentences?.category) }}</span>
-                <span class="session-duration">⏱️ {{ session.duration_seconds }}s</span>
-                <span class="session-status">
-                  {{ session.completed ? '✅ Completed' : (session.accuracy_score < 70 ? '❌ Incomplete' : '⏳ In Progress') }}
-                </span>
-                <button @click="deleteSession(session.id)" class="delete-session-btn" title="Delete this session">
-                  <Trash2 :size="16" />
-                </button>
-              </div>
+            <div class="chart-wrapper">
+              <canvas ref="frequencyChartCanvas"></canvas>
             </div>
           </div>
         </div>
-
-        <!-- Achievements -->
+<!-- Achievements -->
         <div class="achievements-card">
           <h3>🏆 Achievements</h3>
           <div class="achievements-grid">
@@ -101,15 +63,41 @@
               <div class="achievement-name">Week Warrior</div>
               <div class="achievement-desc">7-day streak</div>
             </div>
-            <div class="achievement" :class="{ unlocked: progress?.average_accuracy >= 90 }">
+            <div class="achievement" :class="{ unlocked: Number(averageAIScore) >= 90 }">
               <div class="achievement-icon">🎯</div>
-              <div class="achievement-name">Perfectionist</div>
-              <div class="achievement-desc">90% avg accuracy</div>
+              <div class="achievement-name">Communication Pro</div>
+              <div class="achievement-desc">90% avg AI score</div>
             </div>
             <div class="achievement" :class="{ unlocked: progress?.total_sentences >= 50 }">
               <div class="achievement-icon">💪</div>
               <div class="achievement-name">Master Speaker</div>
               <div class="achievement-desc">50 sentences</div>
+            </div>
+          </div>
+        </div>
+        <!-- Recent Sessions -->
+        <div class="recent-sessions">
+          <h3>Recent Practice Sessions</h3>
+          <div v-if="sessions.length === 0" class="empty-state">
+            No practice sessions yet. Start practicing today!
+          </div>
+          <div v-else class="sessions-list">
+            <div v-for="session in sessions" :key="session.id" class="session-item">
+              <div class="session-header">
+                <span class="session-date">{{ formatDate(session.created_at) }}</span>
+                <div class="session-scores">
+                  <span v-if="session.ai_score" class="score-badge ai-score">
+                    🤖 {{ session.ai_score }}%
+                  </span>
+                </div>
+              </div>
+              <div class="session-meta">
+                <span class="session-category">{{ formatCategory(session.daily_sentences?.category) }}</span>
+                <span class="session-duration">⏱️ {{ session.duration_seconds }}s</span>
+                <button @click="deleteSession(session.id)" class="delete-session-btn" title="Delete this session">
+                  <Trash2 :size="16" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -195,14 +183,6 @@ const createAccuracyChart = () => {
     data: {
       labels: data.map(s => formatDateShort(s.created_at)),
       datasets: [
-        {
-          label: 'Completeness %',
-          data: data.map(s => parseFloat(s.accuracy_score)),
-          borderColor: '#667eea',
-          backgroundColor: 'rgba(102, 126, 234, 0.1)',
-          tension: 0.4,
-          fill: true
-        },
         {
           label: 'AI Score %',
           data: data.map(s => s.ai_score ? parseFloat(s.ai_score) : null),
@@ -351,6 +331,9 @@ const deleteSession = async (sessionId) => {
 
     if (error) throw error
 
+    // Recalculate stats
+    await practiceStore.updateUserProgress()
+
     // Show success message
     alert('Session deleted successfully!')
 
@@ -378,28 +361,33 @@ const deleteSession = async (sessionId) => {
 <style scoped>
 .dashboard-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: #f3f4f6;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(102, 126, 234, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(118, 75, 162, 0.15) 0px, transparent 50%);
 }
 
 .dashboard-content {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: 60px 20px;
 }
 
 .page-title {
-  color: white;
+  color: #111827;
   font-size: 2.5rem;
-  margin-bottom: 30px;
-  text-align: center;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  margin-bottom: 40px;
+  text-align: left;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  text-shadow: none;
 }
 
 .loading {
   text-align: center;
-  color: white;
+  color: #6b7280;
   font-size: 1.2rem;
-  padding: 40px;
+  padding: 60px;
 }
 
 .dashboard-grid {
@@ -410,21 +398,23 @@ const deleteSession = async (sessionId) => {
 
 .stats-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
 }
 
 .stat-card {
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(20px);
-  padding: 30px;
-  border-radius: 20px;
-  text-align: center;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  background: white;
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
 }
 
 .stat-card::before {
@@ -432,44 +422,49 @@ const deleteSession = async (sessionId) => {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
+  width: 100%;
   height: 4px;
   background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-  transform: scaleX(0);
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .stat-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 16px 48px rgba(102, 126, 234, 0.15);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 .stat-card:hover::before {
   transform: scaleX(1);
+  opacity: 1;
 }
 
 .stat-icon {
-  font-size: 2.5rem;
-  margin-bottom: 10px;
+  font-size: 2rem;
+  margin-bottom: 16px;
+  background: #f3f4f6;
+  padding: 12px;
+  border-radius: 12px;
+  display: inline-flex;
 }
 
 .stat-value {
-  font-size: 2.4rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin: 10px 0;
-  letter-spacing: -1px;
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #111827;
+  line-height: 1;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.025em;
+  background: none;
+  -webkit-text-fill-color: initial;
 }
 
 .stat-label {
   color: #6b7280;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   text-transform: uppercase;
-  letter-spacing: 1.2px;
+  letter-spacing: 0.05em;
 }
 
 .charts-section {
@@ -483,8 +478,8 @@ const deleteSession = async (sessionId) => {
   backdrop-filter: blur(20px);
   padding: 30px;
   border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(229, 231, 235, 0.5);
   transition: all 0.3s ease;
 }
 
@@ -494,47 +489,49 @@ const deleteSession = async (sessionId) => {
 
 .chart-card h3 {
   margin-top: 0;
-  color: #2c3e50;
-  margin-bottom: 25px;
-  font-size: 1.2rem;
+  color: #111827;
+  margin-bottom: 24px;
+  font-size: 1.25rem;
   font-weight: 700;
-  letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.chart-card canvas {
-  max-height: 300px;
+.chart-wrapper {
+  position: relative;
+  height: 300px;
+  width: 100%;
 }
 
 .recent-sessions {
   background: white;
-  padding: 25px;
-  border-radius: 15px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  padding: 32px;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(229, 231, 235, 0.5);
 }
 
 .recent-sessions h3 {
   margin-top: 0;
-  color: #333;
-  margin-bottom: 20px;
-}
-
-.empty-state {
-  text-align: center;
-  color: #999;
-  padding: 40px;
-}
-
-.sessions-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+  color: #111827;
+  margin-bottom: 24px;
+  font-size: 1.25rem;
+  font-weight: 700;
 }
 
 .session-item {
-  padding: 20px;
-  background: #f8f9ff;
+  padding: 24px;
+  background: white;
   border-radius: 12px;
-  border-left: 4px solid #667eea;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+  margin-bottom: 16px;
+}
+
+.session-item:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 .session-header {
@@ -565,99 +562,113 @@ const deleteSession = async (sessionId) => {
 }
 
 .score-badge.completeness.excellent {
-  background: #4caf50;
-  color: white;
+  display: none;
 }
 
 .score-badge.completeness.good {
-  background: #ff9800;
-  color: white;
+  display: none;
 }
 
 .score-badge.completeness.needs-work {
-  background: #f44336;
-  color: white;
+  display: none;
 }
 
 .score-badge.ai-score {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+  border: none;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .session-meta {
   display: flex;
-  gap: 12px;
-  font-size: 0.85rem;
-  margin-top: 8px;
+  gap: 16px;
+  font-size: 0.9rem;
   align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid #f3f4f6;
+  margin-top: 16px;
 }
 
 .session-category {
-  background: #667eea;
-  color: white;
-  padding: 4px 10px;
-  border-radius: 8px;
-  text-transform: capitalize;
+  background: #f3f4f6;
+  color: #4b5563;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .session-duration {
-  color: #666;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
 }
 
 .session-status {
-  color: #666;
+  /* Removed or deprecated */
+  display: none;
 }
 
 .delete-session-btn {
   margin-left: auto;
-  background: transparent;
-  border: none;
-  color: #dc3545;
+  background: white;
+  border: 1px solid #fee2e2;
+  color: #ef4444;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 8px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 .delete-session-btn:hover {
-  background: rgba(220, 53, 69, 0.1);
-  transform: scale(1.1);
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .achievements-card {
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(20px);
-  padding: 30px;
-  border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: white;
+  padding: 32px;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .achievements-card h3 {
   margin-top: 0;
-  color: #2c3e50;
-  margin-bottom: 25px;
-  font-size: 1.3rem;
+  color: #111827;
+  margin-bottom: 24px;
+  font-size: 1.25rem;
   font-weight: 700;
-  letter-spacing: -0.3px;
 }
 
 .achievements-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 15px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 20px;
 }
 
 .achievement {
   padding: 24px;
   text-align: center;
-  border-radius: 16px;
-  background: rgba(102, 126, 234, 0.05);
-  border: 2px solid rgba(102, 126, 234, 0.1);
-  opacity: 0.5;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  opacity: 0.6;
+  transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
 }

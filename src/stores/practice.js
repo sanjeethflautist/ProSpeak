@@ -91,13 +91,19 @@ export const usePracticeStore = defineStore('practice', {
 
       const totalSessions = sessions.length
       const completedSessions = sessions.filter(s => s.completed).length
-      const avgAccuracy = sessions.reduce((acc, s) => acc + parseFloat(s.accuracy_score), 0) / totalSessions
+      
+      // Calculate average score using AI Score primarily, falling back to accuracy score for old sessions
+      // Since we moved to AI-only, accuracy_score is 0 for new sessions
+      const avgScore = sessions.reduce((acc, s) => {
+        const score = s.ai_score !== null ? parseFloat(s.ai_score) : parseFloat(s.accuracy_score)
+        return acc + (isNaN(score) ? 0 : score)
+      }, 0) / totalSessions
 
       // Calculate streak
       const { currentStreak, longestStreak } = this.calculateStreaks(sessions)
 
       const today = new Date().toISOString().split('T')[0]
-
+      
       // Upsert progress
       const { error } = await supabase
         .from('user_progress')
@@ -105,7 +111,7 @@ export const usePracticeStore = defineStore('practice', {
           user_id: user.id,
           total_sessions: totalSessions,
           total_sentences: completedSessions,
-          average_accuracy: avgAccuracy.toFixed(2),
+          average_accuracy: avgScore.toFixed(2), // Storing AI Score in average_accuracy column
           current_streak: currentStreak,
           longest_streak: longestStreak,
           last_practice_date: today,

@@ -14,10 +14,10 @@ function generateAnalysisPrompt(
   contentType: string,
   category: string | null
 ): string {
-  const baseInstruction = `You are an expert speech coach. Analyze this practice session by comparing the spoken version against the original text:
+  const baseInstruction = `You are an expert speech coach. LISTEN to the provided audio (if available) and analyze this practice session by comparing the spoken version against the original text.
 
 ORIGINAL TEXT: "${originalText}"
-SPOKEN VERSION: "${spokenText}"
+${spokenText !== "(Audio Provided)" ? `SPOKEN VERSION: "${spokenText}"` : "Note: Analyze the audio directly."}
 ${audioAnalysis}`
 
   let contextualGuidance = ''
@@ -146,15 +146,22 @@ serve(async (req) => {
     console.log('Content type:', contentType, 'Category:', category)
     
     // Input validation
-    if (!spokenText || !originalText) {
+    if (!originalText) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
+        JSON.stringify({ error: 'Missing required fields: originalText' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (!spokenText && !audioBase64) {
+      return new Response(
+        JSON.stringify({ error: 'Missing input: provide spokenText or audioBase64' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
     
     // Limit text length to prevent abuse (increased for custom content)
-    if (spokenText.length > 5000 || originalText.length > 5000) {
+    if ((spokenText && spokenText.length > 5000) || originalText.length > 5000) {
       return new Response(
         JSON.stringify({ error: 'Text too long. Maximum 5000 characters.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -250,36 +257,45 @@ serve(async (req) => {
       const audioBlob = new Blob([audioBytes], { type: 'audio/webm' })
       
       // Calculate approximate duration and speaking rate
-      const audioDuration = audioBytes.length / (16000 * 2) // Rough estimate
-      const wordCount = spokenText.split(' ').length
-      const wordsPerMinute = Math.round((wordCount / audioDuration) * 60)
-      
-      console.log(`Audio analysis: ${wordCount} words in ~${audioDuration.toFixed(1)}s = ${wordsPerMinute} WPM`)
-      
+      // Without accurate duration decoding, we'll skip local WPM calc
       audioAnalysis = `
-Speaking Rate: ${wordsPerMinute} words per minute ${wordsPerMinute < 120 ? '(slow)' : wordsPerMinute > 160 ? '(fast)' : '(good pace)'}.
-Audio Duration: ${audioDuration.toFixed(1)} seconds.`
+(Audio provided for analysis)
+Please estimate the speaking pace and delivery quality from the audio directly.`
     }
 
-    // Generate context-appropriate prompt based on content type and category
-    const prompt = generateAnalysisPrompt(originalText, spokenText, audioAnalysis, contentType, category)
+    // If spokenText is missing, we rely on audio analysis
+    const isAudioOnly = !spokenText && audioBase64;
+    const prompt = generateAnalysisPrompt(originalText, spokenText || "(Audio Provided)", audioAnalysis, contentType, category)
 
     console.log('Calling Gemini API...')
-    console.log('Using model: gemini-2.5-flash')
+    // User requested gemini-2.5-flash
+    const modelName = 'gemini-2.5-flash'; 
+    console.log(`Using model: ${modelName}`)
     
+    const requestBody: any = {
+      contents: [{
+        parts: [{ text: prompt }]
+      }]
+    };
+
+    if (audioBase64) {
+       requestBody.contents[0].parts.push({
+         inline_data: {
+           mime_type: "audio/webm", // Assuming webm from frontend
+           data: audioBase64
+         }
+       });
+    }
+
     const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent',
+      `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-goog-api-key': geminiApiKey
         },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{ text: prompt }]
-          }]
-        })
+        body: JSON.stringify(requestBody)
       }
     )
 
@@ -299,6 +315,18 @@ Audio Duration: ${audioDuration.toFixed(1)} seconds.`
         errorMessage = 'Invalid or expired Gemini API key. Please update your API key in Settings.'
       } else if (response.status === 429) {
         errorMessage = 'API rate limit exceeded. Please try again later or check your Gemini API quota.'
+      } else {
+         // Include upstream error details for debugging
+         try {
+            const errObj = JSON.parse(errorText);
+            if (errObj.error && errObj.error.message) {
+                errorMessage += ` (${errObj.error.message})`;
+            } else {
+                errorMessage += ` (${errorText})`;
+            }
+         } catch (e) {
+             errorMessage += ` (${errorText.substring(0, 100)})`;
+         }
       }
       
       return new Response(

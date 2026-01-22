@@ -105,10 +105,9 @@
         <div v-if="isRecording" class="recording-indicator">
           <div class="recording-pulse"></div>
           <span class="recording-text">Recording in progress... Speak clearly</span>
-          <span class="recording-interim" v-if="userTranscript">{{ userTranscript }}</span>
         </div>
 
-        <div v-if="userTranscript" class="results">
+        <div v-if="recordedAudioBlob || userTranscript" class="results">
           <div class="results-header">
             <h3>Your Recording:</h3>
             <button 
@@ -121,17 +120,9 @@
               <span v-else>▶️ Play Your Voice</span>
             </button>
           </div>
-          <p class="user-text">{{ userTranscript }}</p>
-
+          <!-- Transcription removed as requested -->
+          
           <div class="scores-container">
-            <div class="score-card">
-              <div class="score-label">Completeness Score</div>
-              <div class="score-value" :class="accuracyClass">
-                {{ accuracyScore }}%
-              </div>
-              <div class="score-description">Word accuracy</div>
-            </div>
-
             <div v-if="aiScore > 0" class="score-card ai-score-card">
               <div class="score-label">AI Communication Score</div>
               <div class="score-value" :class="getAIScoreClass(aiScore)">
@@ -140,19 +131,13 @@
               <div class="score-description">Delivery & clarity</div>
             </div>
           </div>
-
-          <div class="feedback">
-            <p v-if="accuracyScore >= 90" class="excellent">🎉 Excellent! Almost perfect!</p>
-            <p v-else-if="accuracyScore >= 70" class="good">👍 Good job! Keep practicing!</p>
-            <p v-else class="needs-work">💪 Keep trying! Practice makes perfect!</p>
-          </div>
-
+          
           <div v-if="analyzingAI" class="ai-analyzing">
-            <p>🤖 AI analyzing your speech...</p>
+            <p>🤖 AI is listening and analyzing your speech...</p>
           </div>
 
           <div v-if="aiAnalysis" class="ai-analysis">
-            <h4>{{ aiScore > 0 ? '🎯 AI Coach Feedback:' : 'AI analysis not performed' }}</h4>
+            <h4>{{ aiScore > 0 ? '🎯 AI Coach Feedback:' : 'Analysis Results:' }}</h4>
             <p>{{ aiAnalysis }}</p>
           </div>
 
@@ -504,54 +489,46 @@ const stopRecording = async () => {
     console.log('Stopping recording...')
     const result = await recognizer.stop()
     
-    if (!result || !result.text) {
-      error.value = 'No speech detected. Please try again.'
+    // Result now only has audioBlob, text is null
+    if (!result || !result.audioBlob) {
+      error.value = 'No recording captured. Please try again.'
       return
     }
     
-    console.log('Recording stopped, text:', result.text)
-    userTranscript.value = result.text
+    console.log('Recording stopped')
     recordedAudioBlob.value = result.audioBlob
 
     // Get the expected text based on mode
     const expectedText = practiceMode.value === 'daily' ? sentence.value.sentence : sentence.value.content
 
-    // Calculate accuracy
-    accuracyScore.value = parseFloat(calculateAccuracy(expectedText, result.text))
-
-    // Get AI analysis with audio (only if completeness score >= 40%)
-    if (accuracyScore.value >= 40) {
-      console.log('Starting AI analysis...')
-      analyzingAI.value = true
-      try {
-        // Determine content type and category for AI analysis
-        const contentType = practiceMode.value === 'daily' ? 'business' : 'custom'
-        const contentCategory = practiceMode.value === 'custom' ? sentence.value.category : null
-        
-        const aiResult = await analyzeVoiceWithAI(
-          result.text, 
-          expectedText, 
-          result.audioBlob,
-          contentType,
-          contentCategory
-        )
-        console.log('AI Analysis result:', aiResult)
-        if (aiResult && aiResult.aiScore) {
-          aiAnalysis.value = aiResult.analysis
-          aiScore.value = aiResult.aiScore
-          console.log('✅ AI Score set to:', aiScore.value)
-        } else {
-          console.warn('AI analysis returned null or missing aiScore:', aiResult)
-        }
-      } catch (aiError) {
-        console.error('AI analysis failed:', aiError)
-      } finally {
-        analyzingAI.value = false
+    // Always Start AI analysis
+    console.log('Starting AI analysis...')
+    analyzingAI.value = true
+    try {
+      // Determine content type and category for AI analysis
+      const contentType = practiceMode.value === 'daily' ? 'business' : 'custom'
+      const contentCategory = practiceMode.value === 'custom' ? sentence.value.category : null
+      
+      const aiResult = await analyzeVoiceWithAI(
+        null,  // No text transcript
+        expectedText, 
+        result.audioBlob,
+        contentType,
+        contentCategory
+      )
+      console.log('AI Analysis result:', aiResult)
+      if (aiResult && aiResult.aiScore) {
+        aiAnalysis.value = aiResult.analysis
+        aiScore.value = aiResult.aiScore
+        console.log('✅ AI Score set to:', aiScore.value)
+      } else {
+        console.warn('AI analysis returned null or missing aiScore:', aiResult)
       }
-    } else {
-      console.log('Skipping AI analysis - completeness score below 40%')
-      aiAnalysis.value = 'Speak more to perform AI analysis. The sentence was too short to provide meaningful feedback.'
-      aiScore.value = 0
+    } catch (aiError) {
+      console.error('AI analysis failed:', aiError)
+      error.value = 'AI Analysis failed: ' + aiError.message
+    } finally {
+      analyzingAI.value = false
     }
 
     // Calculate duration
@@ -561,7 +538,7 @@ const stopRecording = async () => {
     if (practiceMode.value === 'daily') {
       await practiceStore.savePracticeSession(
         sentence.value.id,
-        accuracyScore.value,
+        0, // No accuracy score
         duration,
         aiScore.value,
         null
@@ -569,7 +546,7 @@ const stopRecording = async () => {
     } else {
       await practiceStore.savePracticeSession(
         null,
-        accuracyScore.value,
+        0, // No accuracy score
         duration,
         aiScore.value,
         sentence.value.id

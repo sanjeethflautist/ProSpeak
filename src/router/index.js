@@ -12,11 +12,12 @@ import LeaderboardView from '../views/LeaderboardView.vue'
 import SupportView from '../views/SupportView.vue'
 import AboutView from '../views/AboutView.vue'
 import ContactView from '../views/ContactView.vue'
+import { MAINTENANCE_MODE } from '../config.js'
 
 const routes = [
   {
     path: '/',
-    redirect: '/maintenance'
+    redirect: MAINTENANCE_MODE ? '/maintenance' : '/login'
   },
   {
     path: '/maintenance',
@@ -101,16 +102,18 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  // Always redirect to maintenance page
-  if (to.path !== '/maintenance') {
-    next('/maintenance')
-  } else {
-    next()
+  // Maintenance mode check
+  if (MAINTENANCE_MODE) {
+    if (to.path !== '/maintenance') {
+      next('/maintenance')
+      return
+    }
+  } else if (to.path === '/maintenance') {
+    // If not in maintenance mode, redirect away from maintenance page
+    next('/')
+    return
   }
-})
 
-/*
-router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
   
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
@@ -121,6 +124,5 @@ router.beforeEach((to, from, next) => {
     next()
   }
 })
-*/
 
 export default router
